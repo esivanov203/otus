@@ -1,19 +1,44 @@
 package hw03frequencyanalysis
 
 import (
+	"errors"
+	"log"
 	"sort"
 	"strings"
 )
 
 const count = 10
 
+var ErrEmptyString = errors.New("empty string")
+
+var ErrNoWords = errors.New("no words in empty string")
+
 type WordList struct {
 	Word     string
 	Quantity int
 }
 
-func Top10(text string) []string {
+func split(text string) ([]string, error) {
+	if strings.TrimSpace(text) == "" {
+		// Эта операция по сути не нужна, применил ее,
+		// чтобы показать обработку разных ошибок (для учебных целей)
+		return nil, ErrEmptyString
+	}
 	words := strings.Fields(text)
+	if len(words) == 0 {
+		return nil, ErrNoWords
+	}
+
+	return words, nil
+}
+
+func Top10(text string) []string {
+	words, err := split(text)
+	if errors.Is(err, ErrNoWords) || errors.Is(err, ErrEmptyString) {
+		return []string{}
+	} else if err != nil {
+		log.Fatalf("Unexpected fail to split words: %v", err)
+	}
 
 	uniqueWords := map[string]int{}
 	for _, word := range words {
