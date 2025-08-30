@@ -50,7 +50,45 @@ func TestCache(t *testing.T) {
 	})
 
 	t.Run("purge logic", func(t *testing.T) {
-		// Write me
+		c := NewCache(5)
+		c.Set("a", 1)
+		_, ok := c.Get("a")
+		require.True(t, ok)
+
+		c.Clear()
+		_, ok = c.Get("a")
+		require.False(t, ok)
+	})
+
+	t.Run("add after displacement", func(t *testing.T) {
+		c := NewCache(2)
+		c.Set("a", 1)
+		c.Set("b", 2)
+		c.Set("c", 3)
+
+		_, ok := c.Get("a")
+		require.False(t, ok) // ключ a - вытеснился
+
+		wasInCache := c.Set("a", 10)
+		require.False(t, wasInCache) // в кэше не было элемента a
+		val, ok := c.Get("a")
+		require.True(t, ok)
+		require.Equal(t, 10, val)
+	})
+
+	t.Run("capacity ", func(t *testing.T) {
+		c := NewCache(3)
+		c.Set("a", 1)
+		c.Set("b", 2)
+		c.Set("c", 3)
+		c.Get("b")
+		c.Get("c")
+		c.Get("a")
+		c.Get("c")
+
+		c.Set("d", 4)
+		_, ok := c.Get("b")
+		require.False(t, ok)
 	})
 }
 
