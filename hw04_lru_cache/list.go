@@ -89,20 +89,15 @@ func (l *list) MoveToFront(i *ListItem) {
 		return
 	}
 	// вырезаем i из текущего места
-	if i.Prev != nil {
-		i.Prev.Next = i.Next
-	}
+	i.Prev.Next = i.Next
 	if i.Next != nil {
 		i.Next.Prev = i.Prev
-	}
-	if l.back == i {
+	} else {
 		l.back = i.Prev
 	}
 	// вставляем в начало
 	i.Prev = nil
 	i.Next = l.head
-	if l.head != nil {
-		l.head.Prev = i
-	}
+	l.head.Prev = i
 	l.head = i
 }
