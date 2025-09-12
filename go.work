@@ -5,3 +5,4 @@ use ./hw02_unpack_string
 use ./hw03_frequency_analysis
 use ./hw04_lru_cache
 use ./hw05_parallel_execution
+use ./hw06_pipeline_execution

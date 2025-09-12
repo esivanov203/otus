@@ -91,6 +91,53 @@ func TestPipeline(t *testing.T) {
 		require.Len(t, result, 0)
 		require.Less(t, int64(elapsed), int64(abortDur)+int64(fault))
 	})
+
+	t.Run("no data in", func(t *testing.T) {
+		in := make(Bi)
+		done := make(Bi)
+		close(in)
+
+		abortDur := sleepPerStage * 2
+		go func() {
+			<-time.After(abortDur)
+			close(done)
+		}()
+
+		result := make([]string, 0, 10)
+		start := time.Now()
+		for s := range ExecutePipeline(in, done, stages...) {
+			result = append(result, s.(string))
+		}
+		elapsed := time.Since(start)
+
+		require.Len(t, result, 0)
+		require.Less(t, int64(elapsed), int64(abortDur)+int64(fault))
+	})
+
+	t.Run("done before start", func(t *testing.T) {
+		in := make(Bi)
+		done := make(Bi)
+		close(done)
+
+		data := []int{1, 2, 3, 4, 5}
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]string, 0, 10)
+		start := time.Now()
+		for s := range ExecutePipeline(in, done, stages...) {
+			result = append(result, s.(string))
+		}
+		elapsed := time.Since(start)
+
+		require.Len(t, result, 0)
+		require.Less(t, int64(elapsed), int64(fault))
+	})
 }
 
 func TestAllStageStop(t *testing.T) {
@@ -145,6 +192,27 @@ func TestAllStageStop(t *testing.T) {
 		wg.Wait()
 
 		require.Len(t, result, 0)
+	})
+}
 
+func TestNoStages(t *testing.T) {
+	t.Run("no stages", func(t *testing.T) {
+		in := make(Bi)
+		data := []int{1, 2, 3, 4, 5}
+
+		go func() {
+			for _, v := range data {
+				in <- v
+			}
+			close(in)
+		}()
+
+		result := make([]int, 0, 10)
+
+		for s := range ExecutePipeline(in, nil, nil) {
+			result = append(result, s.(int))
+		}
+
+		require.Equal(t, result, data)
 	})
 }
