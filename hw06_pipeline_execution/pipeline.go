@@ -8,49 +8,51 @@ type (
 
 type Stage func(in In) (out Out)
 
-func ExecutePipeline(in In, done In, stages ...Stage) Out {
-	if len(stages) == 0 { // если стадий нет
-		return in // возвращаем исходный канал (откуда считаются исходные данные)
-	}
-	current := in
-	for _, stage := range stages {
-		if stage == nil { // если стадия пустая, то ее пропускаем
-			continue
-		}
-		// между стадиями врезаем горутину,
-		// которая получает выходной канал из предыдущей стадии
-		// проверяет сигнал done и если нет сигнала
-		// передает данные на следующую стадию
-		wrapCh := make(Bi)
-		go func(cur In) {
-			defer func() {
-				close(wrapCh)        // безопасно закрываем вспомогательный канал
-				for v := range cur { // канал из предыдущей стадии очищаем чтобы избежать deadlock
-					_ = v
-				}
-			}()
-			for {
-				select {
-				case <-done: // проверяем сигнал перед считыванием из канала с предыдущей стадией
+// wrap копирует данные из in в новый канал, реагируя на done.
+// Если done закрыт — прекращает работу и закрывает out.
+func wrap(in In, done In) Out {
+	out := make(Bi)
+	go func() {
+		defer close(out)
+		defer func() {
+			for v := range in {
+				_ = v
+			}
+		}()
+
+		for {
+			select {
+			case <-done:
+				return
+			case v, ok := <-in:
+				if !ok {
 					return
-				case v, ok := <-cur:
-					if !ok {
-						return
-					}
-					select {
-					case <-done: // проверяем сигнал перед записью в канал со след стадией
-						return
-					case wrapCh <- v:
-					}
+				}
+				select {
+				case <-done:
+					return
+				case out <- v:
 				}
 			}
-		}(current)
-		// связываем стадии через нашу техническую горутину
-		// если сигнал done был бы не нужен,
-		// то было бы просто next := stage(in) без технической горутины и канала wrapCh
-		next := stage(wrapCh)
-		current = next
+		}
+	}()
+	return out
+}
+
+func ExecutePipeline(in In, done In, stages ...Stage) Out {
+	if len(stages) == 0 {
+		return in
 	}
 
-	return current
+	current := in
+	for _, stage := range stages {
+		if stage == nil {
+			continue
+		}
+		// оборачиваем канал перед каждой стадией
+		current = stage(wrap(current, done))
+	}
+
+	// и выходной канал - тоже
+	return wrap(current, done)
 }
