@@ -6,7 +6,10 @@ import (
 	"io"
 	"log"
 	"os"
+	"time"
 
+	//nolint:depguard
+	"github.com/schollz/progressbar/v3"
 	"golang.org/x/sys/unix"
 )
 
@@ -55,6 +58,36 @@ func loadFile(fromPath string, offset int64) (*os.File, int64, error) {
 	return fIn, fInSize, nil
 }
 
+type Bar struct {
+	bar   *progressbar.ProgressBar
+	use   bool
+	total int64
+}
+
+func NewBar(use bool, total int64) *Bar {
+	if use {
+		bar := progressbar.NewOptions64(total,
+			progressbar.OptionEnableColorCodes(true),
+			progressbar.OptionSetDescription("[cyan]Copying...[reset]"),
+			progressbar.OptionShowBytes(true),
+			progressbar.OptionSetWidth(15),
+			progressbar.OptionThrottle(65*time.Millisecond),
+			progressbar.OptionShowCount(),
+		)
+		return &Bar{bar: bar, use: true, total: total}
+	}
+	return &Bar{}
+}
+
+func (b *Bar) Add(n int64) {
+	if !b.use {
+		return
+	}
+	if err := b.bar.Add64(n); err != nil {
+		log.Println(err)
+	}
+}
+
 func Copy(fromPath, toPath string, offset, limit int64, showProgress bool) error {
 	if err := validate(fromPath, toPath, offset, limit); err != nil {
 		return err
@@ -101,6 +134,8 @@ func Copy(fromPath, toPath string, offset, limit int64, showProgress bool) error
 	}
 	buf := make([]byte, bufSize)
 
+	bar := NewBar(showProgress, total)
+
 	for counter < total {
 		if bufSize > total-counter {
 			buf = buf[:total-counter]
@@ -114,13 +149,13 @@ func Copy(fromPath, toPath string, offset, limit int64, showProgress bool) error
 		if errW != nil {
 			return fmt.Errorf("%w: %w", ErrWriteFile, errW)
 		}
+
 		if readN != wroteN {
 			return ErrWriteFile
 		}
 		counter += int64(wroteN)
-		if showProgress {
-			fmt.Printf("\rProcessed...%0.f%%", float64(counter)/float64(total)*100)
-		}
+		bar.Add(int64(wroteN))
+
 		if errors.Is(errR, io.EOF) {
 			break
 		}
