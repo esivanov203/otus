@@ -50,7 +50,7 @@ func makeFromFile(path string) (EnvValue, error) {
 	defer func() { _ = f.Close() }()
 
 	var fLine string
-	var val EnvValue = EnvValue{NeedRemove: true}
+	val := EnvValue{NeedRemove: true}
 
 	scanner := bufio.NewScanner(f)
 	if scanner.Scan() {

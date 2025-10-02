@@ -1,16 +1,17 @@
 package main
 
 import (
-	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 func TestTempDir(t *testing.T) {
 	tmp := os.TempDir()
 	wDir := filepath.Join(tmp, "env-dir")
-	err := os.MkdirAll(wDir, 0755)
+	err := os.MkdirAll(wDir, 0o755)
 	require.NoError(t, err)
 	defer func() {
 		err := os.RemoveAll(wDir)
@@ -18,7 +19,7 @@ func TestTempDir(t *testing.T) {
 	}()
 
 	createFile := func(path string, content []byte) {
-		err := os.WriteFile(path, content, 777)
+		err := os.WriteFile(path, content, 0o755)
 		require.NoError(t, err)
 	}
 	files := []struct {
@@ -40,12 +41,12 @@ func TestTempDir(t *testing.T) {
 	expected := Environment{}
 
 	// ignore list
-	err = os.Mkdir(filepath.Join(wDir, "CATALOG"), 777)
+	err = os.Mkdir(filepath.Join(wDir, "CATALOG"), 0o755)
 	require.NoError(t, err)
 	err = os.WriteFile(filepath.Join(wDir, "IGNORE"), []byte("file"), 0o000)
 	require.NoError(t, err)
 
-	//create readable files and expected
+	// create readable files and expected
 	for _, cf := range files {
 		createFile(filepath.Join(wDir, cf.name), []byte(cf.content))
 		if cf.name != "IGNORE=ME" {
