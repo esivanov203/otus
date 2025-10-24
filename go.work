@@ -8,3 +8,4 @@ use ./hw05_parallel_execution
 use ./hw06_pipeline_execution
 use ./hw07_file_copying
 use ./hw08_envdir_tool
+use ./hw10_program_optimization
