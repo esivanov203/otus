@@ -125,18 +125,14 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-func TestValidateNegative(t *testing.T) {
+func TestValidateErrors(t *testing.T) {
 	tests := []struct {
 		name         string
 		in           interface{}
 		expectedErrs []string
 	}{
-		{"nil", nil, []string{"nil is not allowed"}},
-		{"not struct", "", []string{"is not a struct"}},
 		{"simple string len", App{"1.0"}, []string{"len"}},
-		{"string in regexp", InRegexp{"ok", "Joe"}, []string{"in", "regexp"}},
 		{"int is not in", Response{700, "body"}, []string{"in"}},
-		{"int in not int", InNotANumber{10}, []string{"in", "must contain numbers"}},
 		{
 			"complex struct",
 			User{
@@ -150,10 +146,13 @@ func TestValidateNegative(t *testing.T) {
 			},
 			[]string{"min", "regexp", "in"},
 		},
-		{"string rule not valid", Name{"Jake"}, []string{"invalid rule"}},
-		{"between int rule not valid", Salary{4000}, []string{"invalid rule"}},
-		{"unknown rules", Unknown{"Jake", 20}, []string{"unknown int rule", "unknown string rule"}},
-		{"unsupported type", NoType{15.2}, []string{"unsupported type"}},
+		{
+			name: "slice with invalid element",
+			in: struct {
+				Tags []string `validate:"in:red,green"`
+			}{Tags: []string{"blue", "red"}},
+			expectedErrs: []string{"in"},
+		},
 	}
 
 	for i, tt := range tests {
@@ -163,6 +162,41 @@ func TestValidateNegative(t *testing.T) {
 
 			result := Validate(tt.in)
 			require.Error(t, result)
+			var vErrs ValidationErrors
+			require.ErrorAs(t, result, &vErrs)
+			for _, expectedErr := range tt.expectedErrs {
+				require.Contains(t, result.Error(), expectedErr)
+			}
+		})
+	}
+}
+
+func TestValidateFaults(t *testing.T) {
+	tests := []struct {
+		name         string
+		in           interface{}
+		expectedErrs []string
+	}{
+		{"nil", nil, []string{"nil is not allowed"}},
+		{"not struct", "", []string{"is not a struct"}},
+		{"int in not int", InNotANumber{10}, []string{"must number"}},
+		{"string rule not valid", Name{"Jake"}, []string{"invalid rule"}},
+		{"between int rule not valid", Salary{4000}, []string{"invalid rule format"}},
+		{"unknown rules", Unknown{"Jake", 20}, []string{"unknown rule"}},
+		{"unsupported type", NoType{15.2}, []string{"unsupported field type"}},
+		{"string in regexp", InRegexp{"ok", "Joe"}, []string{"in", "regexp"}},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("negative case %d", i), func(t *testing.T) {
+			tt := tt
+			t.Parallel()
+
+			result := Validate(tt.in)
+			require.Error(t, result)
+			var internalErr InternalValidationError
+			require.ErrorAs(t, result, &internalErr)
+
 			for _, expectedErr := range tt.expectedErrs {
 				require.Contains(t, result.Error(), expectedErr)
 			}

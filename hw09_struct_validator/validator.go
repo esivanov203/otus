@@ -1,6 +1,7 @@
 package hw09structvalidator
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -9,28 +10,40 @@ import (
 )
 
 type ValidationError struct {
-	Field string
-	Err   error
-	Rule  string
+	Field   string
+	Rule    string
+	Message string
+}
+
+func (err ValidationError) Error() string {
+	return fmt.Sprintf("%s: %s (%s)", err.Field, err.Message, err.Rule)
 }
 
 type ValidationErrors []ValidationError
 
 func (v ValidationErrors) Error() string {
-	msg := ""
-	for _, err := range v {
-		msg += fmt.Sprintf("%s: %s %s", err.Field, err.Rule, err.Err)
+	var sb strings.Builder
+	for _, e := range v {
+		sb.WriteString(e.Error())
+		sb.WriteString("; ")
 	}
+	return strings.TrimSpace(sb.String())
+}
 
-	return msg
+type InternalValidationError struct {
+	Message string
+}
+
+func (e InternalValidationError) Error() string {
+	return fmt.Sprintf("validator internal: %s", e.Message)
 }
 
 func Validate(v interface{}) error {
 	if err := validateStruct(v); err != nil {
-		return fmt.Errorf("validate struct: %w", err)
+		return InternalValidationError{Message: err.Error()}
 	}
 
-	var errs ValidationErrors
+	var vErrs ValidationErrors
 
 	val := reflect.ValueOf(v)
 	if val.Kind() == reflect.Ptr {
@@ -41,16 +54,27 @@ func Validate(v interface{}) error {
 	for i := 0; i < val.NumField(); i++ {
 		field := typ.Field(i)
 		value := val.Field(i)
+
 		tag := field.Tag.Get("validate")
 		if tag == "" {
 			continue
 		}
-		errs = append(errs, validateField(field, tag, value)...)
+
+		fvErrs, err := validateField(field, tag, value)
+		if err != nil {
+			var internalErr InternalValidationError
+			if errors.As(err, &internalErr) {
+				return internalErr
+			}
+			return err
+		}
+		vErrs = append(vErrs, fvErrs...)
 	}
 
-	if len(errs) > 0 {
-		return errs
+	if len(vErrs) > 0 {
+		return vErrs
 	}
+
 	return nil
 }
 
@@ -65,60 +89,73 @@ func validateStruct(v interface{}) error {
 	if t.Kind() != reflect.Struct {
 		return fmt.Errorf("%T is not a struct", v)
 	}
-
 	return nil
 }
 
-func validateField(field reflect.StructField, tag string, value reflect.Value) ValidationErrors {
+func validateField(field reflect.StructField, tag string, value reflect.Value) (ValidationErrors, error) {
 	var errs ValidationErrors
 	rules := strings.Split(tag, "|")
 
-	switch value.Kind() { //nolint:exhaustive // линтер требует реализации всех типов
+	switch value.Kind() { //nolint:exhaustive
 	case reflect.String:
 		str := value.String()
 		for _, rule := range rules {
-			if err := validateString(rule, str); err != nil {
+			vErrMsg, err := validateString(rule, str)
+			if err != nil {
+				return nil, InternalValidationError{Message: fmt.Sprintf("field %s: %v", field.Name, err)}
+			}
+			if vErrMsg != "" {
 				errs = append(errs, ValidationError{
-					Field: field.Name,
-					Err:   err,
-					Rule:  rule,
+					Field:   field.Name,
+					Rule:    rule,
+					Message: vErrMsg,
 				})
 			}
 		}
 	case reflect.Int:
 		num := int(value.Int())
 		for _, rule := range rules {
-			if err := validateInt(rule, num); err != nil {
+			vErrMsg, err := validateInt(rule, num)
+			if err != nil {
+				return nil, InternalValidationError{Message: fmt.Sprintf("field %s: %v", field.Name, err)}
+			}
+			if vErrMsg != "" {
 				errs = append(errs, ValidationError{
-					Field: field.Name,
-					Err:   err,
-					Rule:  rule,
+					Field:   field.Name,
+					Rule:    rule,
+					Message: vErrMsg,
 				})
 			}
 		}
 	case reflect.Slice:
 		for i := 0; i < value.Len(); i++ {
-			element := value.Index(i)
-			subErrs := validateField(field, tag, element)
-			for _, e := range subErrs {
-				e.Field = fmt.Sprintf("%s[%d]", field.Name, i)
+			elem := value.Index(i)
+			vErrs, err := validateField(field, tag, elem)
+			if err != nil {
+				var internalErr InternalValidationError
+				if errors.As(err, &internalErr) {
+					return nil, internalErr
+				}
+				return nil, err
+			}
+			for _, e := range vErrs {
+				e.Field = fmt.Sprintf("%s[%d]", e.Field, i)
 				errs = append(errs, e)
 			}
 		}
 	default:
-		errs = append(errs, ValidationError{
-			Field: field.Name,
-			Err:   fmt.Errorf("unsupported type: %s", value.Kind()),
-		})
+		return nil, InternalValidationError{
+			Message: fmt.Sprintf("unsupported field type %s for field %s", value.Kind(), field.Name),
+		}
 	}
 
-	return errs
+	return errs, nil
 }
 
-func validateString(rule string, value string) error {
+func validateString(rule string, value string) (string, error) {
 	ruleParts := strings.SplitN(rule, ":", 2)
 	if len(ruleParts) != 2 {
-		return fmt.Errorf("invalid rule")
+		return "", fmt.Errorf("invalid rule format: %q", rule)
 	}
 
 	key, param := ruleParts[0], ruleParts[1]
@@ -126,72 +163,76 @@ func validateString(rule string, value string) error {
 	case "len":
 		expected, err := strconv.Atoi(param)
 		if err != nil {
-			return fmt.Errorf("%w", err)
+			return "", fmt.Errorf("must number: %w", err)
 		}
 		if len(value) != expected {
-			return fmt.Errorf("must be %d", expected)
+			return fmt.Sprintf("length must be %d", expected), nil
 		}
+
 	case "regexp":
 		re, err := regexp.Compile(param)
 		if err != nil {
-			return fmt.Errorf("must compile regexp: %w", err)
+			return "", fmt.Errorf("invalid regexp: %w", err)
 		}
 		if !re.MatchString(value) {
-			return fmt.Errorf("must match regexp: %s", re.String())
+			return fmt.Sprintf("must match regexp %q", param), nil
 		}
+
 	case "in":
 		opts := strings.Split(param, ",")
 		for _, opt := range opts {
 			if value == opt {
-				return nil
+				return "", nil
 			}
 		}
-		return fmt.Errorf("must be one of [%s]", strings.Join(opts, ", "))
+		return fmt.Sprintf("must be one of [%s]", strings.Join(opts, ", ")), nil
+
 	default:
-		return fmt.Errorf("unknown string rule")
+		return "", fmt.Errorf("unknown rule: %q", key)
 	}
 
-	return nil
+	return "", nil
 }
 
-func validateInt(rule string, value int) error {
+func validateInt(rule string, value int) (string, error) {
 	ruleParts := strings.SplitN(rule, ":", 2)
 	if len(ruleParts) != 2 {
-		return fmt.Errorf("invalid rule")
+		return "", fmt.Errorf("invalid rule format: %q", rule)
 	}
+
 	key, param := ruleParts[0], ruleParts[1]
 	switch key {
 	case "min":
 		minV, err := strconv.Atoi(param)
 		if err != nil {
-			return fmt.Errorf("min validate: %w", err)
+			return "", fmt.Errorf("must number: %w", err)
 		}
 		if value < minV {
-			return fmt.Errorf("min must be >= %d", minV)
+			return fmt.Sprintf("must be >= %d", minV), nil
 		}
 	case "max":
 		maxV, err := strconv.Atoi(param)
 		if err != nil {
-			return fmt.Errorf("max validate: %w", err)
+			return "", fmt.Errorf("must number: %w", err)
 		}
 		if value > maxV {
-			return fmt.Errorf("max must be <= %d", maxV)
+			return fmt.Sprintf("must be <= %d", maxV), nil
 		}
 	case "in":
 		opts := strings.Split(param, ",")
 		for _, opt := range opts {
 			n, err := strconv.Atoi(opt)
 			if err != nil {
-				return fmt.Errorf("must contain numbers")
+				return "", fmt.Errorf("must number: %w", err)
 			}
 			if value == n {
-				return nil
+				return "", nil
 			}
 		}
-		return fmt.Errorf("must in [%s]", strings.Join(opts, ", "))
+		return fmt.Sprintf("must be one of [%s]", strings.Join(opts, ", ")), nil
 	default:
-		return fmt.Errorf("unknown int rule")
+		return "", fmt.Errorf("unknown rule: %q", key)
 	}
 
-	return nil
+	return "", nil
 }
