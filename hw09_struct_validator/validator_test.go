@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 type UserRole string
@@ -13,11 +15,12 @@ type (
 	User struct {
 		ID     string `json:"id" validate:"len:36"`
 		Name   string
-		Age    int             `validate:"min:18|max:50"`
-		Email  string          `validate:"regexp:^\\w+@\\w+\\.\\w+$"`
-		Role   UserRole        `validate:"in:admin,stuff"`
-		Phones []string        `validate:"len:11"`
-		meta   json.RawMessage //nolint:unused
+		Age    int      `validate:"min:18|max:50"`
+		Email  string   `validate:"regexp:^\\w+@\\w+\\.\\w+$"`
+		Role   UserRole `validate:"in:admin,stuff"`
+		Phones []string `validate:"len:11"`
+		Levels []int    `validate:"in:1,4,5"`
+		meta   json.RawMessage
 	}
 
 	App struct {
@@ -34,27 +37,169 @@ type (
 		Code int    `validate:"in:200,404,500"`
 		Body string `json:"omitempty"`
 	}
+
+	Name struct {
+		Name string `validate:"in-Jake"`
+	}
+
+	Salary struct {
+		Salary int `validate:"max=5000"`
+	}
+
+	Unknown struct {
+		Name  string `validate:"no-string:ok"`
+		Count int    `validate:"no-int:ok"`
+	}
+
+	NoType struct {
+		Height float64 `validate:"min:10"`
+	}
+
+	EmptyTag struct {
+		Name string `validate:""`
+	}
+
+	InRegexp struct {
+		Name  string `validate:"in:admin,stuff"`
+		Login string `validate:"regexp:("`
+	}
+
+	MinMaxBorder struct {
+		Min int `validate:"min:10"`
+		Max int `validate:"max:100"`
+	}
+
+	InNotANumber struct {
+		count int `validate:"in:two,10"`
+	}
+
+	EmptySlice struct {
+		Jobs []string `validate:"len:11"`
+	}
 )
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
-		in          interface{}
-		expectedErr error
+		name string
+		in   interface{}
 	}{
+		{"empty struct", struct{}{}},
+		{"empty tag", EmptyTag{Name: "ok"}},
+		{"empty slice element", EmptySlice{[]string{}}},
+		{"simple string len", App{"1.0.0"}},
+		{"struct by ptr", &App{"1.0.0"}},
+		{"min max border", MinMaxBorder{10, 100}},
 		{
-			// Place your code here.
+			"no any tags in struct",
+			Token{
+				Header:    []byte("header-data"),
+				Payload:   []byte("payload-data"),
+				Signature: []byte("signature-data"),
+			},
 		},
-		// ...
-		// Place your code here.
+		{"struct has other tag", Response{200, "body"}},
+		{
+			"complex struct",
+			User{
+				ID:     "123e4567-e89b-12d3-a456-426614174000",
+				Name:   "Alice",
+				Age:    30,
+				Email:  "alice@example.com",
+				Role:   "admin",
+				Phones: []string{"79991234567", "79997654321"},
+				Levels: []int{1, 5},
+				meta:   json.RawMessage(`{"active":true}`),
+			},
+		},
 	}
 
 	for i, tt := range tests {
-		t.Run(fmt.Sprintf("case %d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("positive case %d", i), func(t *testing.T) {
 			tt := tt
 			t.Parallel()
 
-			// Place your code here.
+			result := Validate(tt.in)
+			require.Equal(t, nil, result)
 			_ = tt
+		})
+	}
+}
+
+func TestValidateErrors(t *testing.T) {
+	tests := []struct {
+		name         string
+		in           interface{}
+		expectedErrs []string
+	}{
+		{"simple string len", App{"1.0"}, []string{"len"}},
+		{"int is not in", Response{700, "body"}, []string{"in"}},
+		{
+			"complex struct",
+			User{
+				ID:     "123e4567-e89b-12d3-a456-426614174000",
+				Name:   "Alice",
+				Age:    17,      // min int
+				Email:  "alice", // regexp string
+				Role:   "adm",   // in string
+				Phones: []string{"79991234567", "79997654321"},
+				meta:   json.RawMessage(`{"active":true}`),
+			},
+			[]string{"min", "regexp", "in"},
+		},
+		{
+			name: "slice with invalid element",
+			in: struct {
+				Tags []string `validate:"in:red,green"`
+			}{Tags: []string{"blue", "red"}},
+			expectedErrs: []string{"in"},
+		},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("negative case %d", i), func(t *testing.T) {
+			tt := tt
+			t.Parallel()
+
+			result := Validate(tt.in)
+			require.Error(t, result)
+			var vErrs ValidationErrors
+			require.ErrorAs(t, result, &vErrs)
+			for _, expectedErr := range tt.expectedErrs {
+				require.Contains(t, result.Error(), expectedErr)
+			}
+		})
+	}
+}
+
+func TestValidateFaults(t *testing.T) {
+	tests := []struct {
+		name         string
+		in           interface{}
+		expectedErrs []string
+	}{
+		{"nil", nil, []string{"nil is not allowed"}},
+		{"not struct", "", []string{"is not a struct"}},
+		{"int in not int", InNotANumber{10}, []string{"must number"}},
+		{"string rule not valid", Name{"Jake"}, []string{"invalid rule"}},
+		{"between int rule not valid", Salary{4000}, []string{"invalid rule format"}},
+		{"unknown rules", Unknown{"Jake", 20}, []string{"unknown rule"}},
+		{"unsupported type", NoType{15.2}, []string{"unsupported field type"}},
+		{"string in regexp", InRegexp{"ok", "Joe"}, []string{"in", "regexp"}},
+	}
+
+	for i, tt := range tests {
+		t.Run(fmt.Sprintf("negative case %d", i), func(t *testing.T) {
+			tt := tt
+			t.Parallel()
+
+			result := Validate(tt.in)
+			require.Error(t, result)
+			var internalErr InternalValidationError
+			require.ErrorAs(t, result, &internalErr)
+
+			for _, expectedErr := range tt.expectedErrs {
+				require.Contains(t, result.Error(), expectedErr)
+			}
 		})
 	}
 }
