@@ -1,3 +1,4 @@
+//go:build !bench
 // +build !bench
 
 package hw10programoptimization
@@ -35,5 +36,37 @@ func TestGetDomainStat(t *testing.T) {
 		result, err := GetDomainStat(bytes.NewBufferString(data), "unknown")
 		require.NoError(t, err)
 		require.Equal(t, DomainStat{}, result)
+	})
+
+	t.Run("empty input", func(t *testing.T) {
+		result, err := GetDomainStat(bytes.NewBufferString(""), "com")
+		require.NoError(t, err)
+		require.Empty(t, result)
+	})
+
+	t.Run("invalid JSON line", func(t *testing.T) {
+		data := `{"Email":"valid@ok.com"}
+{"Email":invalid_json}
+{"Email":"also@ok.com"}`
+
+		_, err := GetDomainStat(bytes.NewBufferString(data), "com")
+		require.Error(t, err)
+	})
+
+	t.Run("domain suffix match", func(t *testing.T) {
+		data := `{"Email":"a@x.com"}
+{"Email":"b@y.company"}`
+		result, err := GetDomainStat(bytes.NewBufferString(data), "com")
+		require.NoError(t, err)
+		require.Equal(t, DomainStat{"x.com": 1}, result)
+	})
+
+	t.Run("repeated emails", func(t *testing.T) {
+		data := `{"Email":"a@site.com"}
+{"Email":"b@site.com"}
+{"Email":"a@site.com"}`
+		result, err := GetDomainStat(bytes.NewBufferString(data), "com")
+		require.NoError(t, err)
+		require.Equal(t, DomainStat{"site.com": 3}, result)
 	})
 }
