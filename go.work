@@ -8,4 +8,5 @@ use ./hw05_parallel_execution
 use ./hw06_pipeline_execution
 use ./hw07_file_copying
 use ./hw08_envdir_tool
+use ./hw11_telnet_client
 use ./hw09_struct_validator

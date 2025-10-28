@@ -1,6 +1,49 @@
 package main
 
+import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	//nolint:depguard
+	"github.com/spf13/pflag"
+)
+
 func main() {
-	// Place your code here,
-	// P.S. Do not rush to throw context down, think think if it is useful with blocking operation?
+	ts := pflag.String("timeout", "10s", "timeout in seconds")
+	pflag.Parse()
+
+	args := pflag.Args()
+	if len(args) < 2 {
+		_, _ = fmt.Fprintf(os.Stderr, "Usage: %s [--timeout=10s] host port\n", os.Args[0])
+		os.Exit(1)
+	}
+
+	h := args[0]
+	p := args[1]
+	t, err := time.ParseDuration(*ts)
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Invalid timeout: %s\nUsage: --timeout=10s\n", *ts)
+		os.Exit(1)
+	}
+
+	tc := NewTelnetClient(fmt.Sprintf("%s:%s", h, p), t, os.Stdin, os.Stdout)
+	err = tc.Connect()
+	if err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "Failed connect to %s %s: %v", h, p, err)
+		os.Exit(1)
+	}
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		_, _ = fmt.Fprintf(os.Stderr, "Нажато CTRL+C\n")
+		_ = tc.Close()
+		os.Exit(0)
+	}()
+
+	tc.Run()
 }
