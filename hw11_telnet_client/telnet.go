@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"os"
-	"sync"
 	"time"
 )
 
@@ -15,7 +13,6 @@ type TelnetClient interface {
 	io.Closer
 	Send() error
 	Receive() error
-	Run()
 }
 
 type telnetClient struct {
@@ -74,33 +71,4 @@ func (c *telnetClient) Close() error {
 		return err
 	}
 	return nil
-}
-
-func (c *telnetClient) Run() {
-	wg := &sync.WaitGroup{}
-	wg.Add(2)
-
-	go func() {
-		defer wg.Done()
-		err := c.Send()
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Отправка завершена: %v\n", err)
-		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Отправлено EOF\n")
-		}
-		_ = c.Close()
-	}()
-
-	go func() {
-		defer wg.Done()
-		err := c.Receive()
-		if err != nil {
-			_, _ = fmt.Fprintf(os.Stderr, "Соединение закрыто сервером: %v\n", err)
-		} else {
-			_, _ = fmt.Fprintf(os.Stderr, "Соединение закрыто сервером\n")
-		}
-		_ = c.Close()
-	}()
-
-	wg.Wait()
 }

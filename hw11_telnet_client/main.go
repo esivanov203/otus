@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -45,5 +46,30 @@ func main() {
 		os.Exit(0)
 	}()
 
-	tc.Run()
+	wg := &sync.WaitGroup{}
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		err := tc.Send()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Отправка завершена: %v\n", err)
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "Отправлено EOF\n")
+		}
+		_ = tc.Close()
+	}()
+
+	go func() {
+		defer wg.Done()
+		err := tc.Receive()
+		if err != nil {
+			_, _ = fmt.Fprintf(os.Stderr, "Соединение закрыто сервером: %v\n", err)
+		} else {
+			_, _ = fmt.Fprintf(os.Stderr, "Соединение закрыто сервером\n")
+		}
+		_ = tc.Close()
+	}()
+
+	wg.Wait()
 }
