@@ -9,4 +9,5 @@ use ./hw06_pipeline_execution
 use ./hw11_telnet_client
 use ./hw07_file_copying
 use ./hw08_envdir_tool
+use ./hw10_program_optimization
 use ./hw09_struct_validator
