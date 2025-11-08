@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -12,7 +14,7 @@ var (
 	gitHash   = "UNKNOWN"
 )
 
-func printVersion() {
+func printVersion(cmd *cobra.Command, args []string) {
 	if err := json.NewEncoder(os.Stdout).Encode(struct {
 		Release   string
 		BuildDate string

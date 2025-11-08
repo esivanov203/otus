@@ -13,8 +13,8 @@ type LoggerConf struct {
 	// TODO
 }
 
-func NewConfig() Config {
-	return Config{}
+func NewConfig(configFile string) (Config, error) {
+	return Config{}, nil
 }
 
 // TODO
