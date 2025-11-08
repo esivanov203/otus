@@ -4,18 +4,14 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Logger  LoggerConf  `yaml:"logger"`
-	Server  ServerConf  `yaml:"server"`
-	Storage StorageConf `yaml:"storage"`
-}
-
-type LoggerConf struct {
-	Level string `yaml:"level"` // DEBUG, INFO, WARN, ERROR
-	// TODO
+	Logger  logger.LoggerConf `yaml:"logger"`
+	Server  ServerConf        `yaml:"server"`
+	Storage StorageConf       `yaml:"storage"`
 }
 
 type ServerConf struct {

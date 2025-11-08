@@ -1,5 +1,6 @@
 logger:
  level: "INFO"
+ type: "json" # or text
 
 server:
   host: "0.0.0.0"

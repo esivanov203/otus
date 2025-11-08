@@ -22,7 +22,10 @@ func runServer(cmd *cobra.Command, args []string) error {
 	}
 
 	// logger, storage, business logic
-	logg := logger.New(cfg.Logger.Level)
+	logg, err := logger.New(cfg.Logger)
+	if err != nil {
+		return fmt.Errorf("initial logger: %w", err)
+	}
 	storage := memorystorage.New()
 	calendar := app.New(logg, storage)
 
