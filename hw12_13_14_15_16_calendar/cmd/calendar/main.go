@@ -19,7 +19,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVar(
 		&configFile,
 		"config",
-		"/etc/calendar/config.toml",
+		"/etc/calendar/config.yaml",
 		"path to configuration file",
 	)
 
@@ -30,7 +30,7 @@ func main() {
 	})
 
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println(err)
+		fmt.Printf("initial error on: %v\n", err)
 		os.Exit(1)
 	}
 }
