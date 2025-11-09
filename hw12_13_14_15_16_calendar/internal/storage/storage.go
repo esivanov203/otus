@@ -10,6 +10,6 @@ type Storage interface {
 	GetEventsList(ctx context.Context) ([]Event, error)
 	GetEventsCount(ctx context.Context) (int, error)
 
-	Connect(ctx context.Context) error
-	Close(ctx context.Context) error
+	Connect() error
+	Close() error
 }

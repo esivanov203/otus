@@ -3,21 +3,22 @@ package main
 import (
 	"context"
 	"fmt"
-	sqlstorage "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage/sql"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/app"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
-
 	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	memorystorage "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage/memory"
+	sqlstorage "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage/sql"
 	"github.com/spf13/cobra"
 )
 
 func runServer(cmd *cobra.Command, args []string) error {
+	_ = cmd
+	_ = args
 	// config
 	cfg, err := NewConfig(configFile)
 	if err != nil {
@@ -36,10 +37,10 @@ func runServer(cmd *cobra.Command, args []string) error {
 		store = memorystorage.New()
 	case "sql":
 		store = sqlstorage.New(cfg.Storage.Dsn)
-		if err := store.Connect(context.Background()); err != nil {
+		if err := store.Connect(); err != nil {
 			return fmt.Errorf("connect to storage: %w", err)
 		}
-		defer func() { _ = store.Close(context.Background()) }()
+		defer func() { _ = store.Close() }()
 	default:
 		return fmt.Errorf("unknown storage type: %s", cfg.Storage.Type)
 	}

@@ -2,12 +2,13 @@ package memorystorage
 
 import (
 	"context"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	"sync"
+
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 )
 
 type Storage struct {
-	mu     sync.RWMutex //nolint:unused
+	mu     sync.RWMutex
 	events map[string]storage.Event
 }
 
@@ -17,15 +18,16 @@ func New() *Storage {
 	}
 }
 
-func (s *Storage) Connect(ctx context.Context) error {
+func (s *Storage) Connect() error {
 	return nil
 }
 
-func (s *Storage) Close(ctx context.Context) error {
+func (s *Storage) Close() error {
 	return nil
 }
 
 func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
+	_ = ctx
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -43,6 +45,7 @@ func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
 }
 
 func (s *Storage) UpdateEvent(ctx context.Context, event storage.Event) error {
+	_ = ctx
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -56,6 +59,7 @@ func (s *Storage) UpdateEvent(ctx context.Context, event storage.Event) error {
 }
 
 func (s *Storage) DeleteEvent(ctx context.Context, event storage.Event) error {
+	_ = ctx
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -69,6 +73,7 @@ func (s *Storage) DeleteEvent(ctx context.Context, event storage.Event) error {
 }
 
 func (s *Storage) GetEvent(ctx context.Context, id string) (storage.Event, error) {
+	_ = ctx
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -81,6 +86,7 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (storage.Event, error
 }
 
 func (s *Storage) GetEventsList(ctx context.Context) ([]storage.Event, error) {
+	_ = ctx
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
@@ -93,6 +99,7 @@ func (s *Storage) GetEventsList(ctx context.Context) ([]storage.Event, error) {
 }
 
 func (s *Storage) GetEventsCount(ctx context.Context) (int, error) {
+	_ = ctx
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

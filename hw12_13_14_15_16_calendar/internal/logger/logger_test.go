@@ -1,16 +1,17 @@
 package logger
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
-	"testing"
 )
 
 func TestLoggerLevelType(t *testing.T) {
 	t.Run("valid level and type", func(t *testing.T) {
-		_, err := New(LoggerConf{Level: "debug", Type: "json"})
+		_, err := New(Conf{Level: "debug", Type: "json"})
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
@@ -18,14 +19,13 @@ func TestLoggerLevelType(t *testing.T) {
 
 	tests := []struct {
 		name string
-		conf LoggerConf
+		conf Conf
 	}{
-		{"invalid level", LoggerConf{Level: "INVALID", Type: "json"}},
-		{"invalid type", LoggerConf{Level: "info", Type: "text"}},
+		{"invalid level", Conf{Level: "INVALID", Type: "json"}},
+		{"invalid type", Conf{Level: "info", Type: "text"}},
 	}
 
 	for _, tt := range tests {
-		tt := tt // захват переменной для t.Run
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := New(tt.conf)
 			if err == nil {

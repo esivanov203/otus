@@ -9,9 +9,9 @@ import (
 )
 
 type Config struct {
-	Logger  logger.LoggerConf `yaml:"logger"`
-	Server  ServerConf        `yaml:"server"`
-	Storage StorageConf       `yaml:"storage"`
+	Logger  logger.Conf `yaml:"logger"`
+	Server  ServerConf  `yaml:"server"`
+	Storage StorageConf `yaml:"storage"`
 }
 
 type ServerConf struct {

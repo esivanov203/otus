@@ -2,12 +2,13 @@ package logger
 
 import (
 	"fmt"
+	"strings"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
-	"strings"
 )
 
-type LoggerConf struct {
+type Conf struct {
 	Level string `yaml:"level"` // DEBUG, INFO, WARN, ERROR
 	Type  string `yaml:"type"`  // json, console
 }
@@ -16,7 +17,7 @@ type Logger struct {
 	*zap.Logger
 }
 
-func New(lc LoggerConf) (*Logger, error) {
+func New(lc Conf) (*Logger, error) {
 	var zl zapcore.Level
 
 	switch strings.ToLower(lc.Level) {

@@ -15,6 +15,8 @@ var (
 )
 
 func printVersion(cmd *cobra.Command, args []string) {
+	_ = cmd
+	_ = args
 	if err := json.NewEncoder(os.Stdout).Encode(struct {
 		Release   string
 		BuildDate string

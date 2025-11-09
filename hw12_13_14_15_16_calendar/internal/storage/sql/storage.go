@@ -5,10 +5,9 @@ import (
 	"database/sql"
 	"errors"
 
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
-
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq" // postgresql driver for sqlx
 )
 
 type Storage struct {
@@ -20,7 +19,7 @@ func New(dsn string) *Storage {
 	return &Storage{dsn: dsn}
 }
 
-func (s *Storage) Connect(ctx context.Context) error {
+func (s *Storage) Connect() error {
 	db, err := sqlx.Connect("postgres", s.dsn)
 	if err != nil {
 		return err
@@ -30,15 +29,15 @@ func (s *Storage) Connect(ctx context.Context) error {
 	return nil
 }
 
-func (s *Storage) Close(ctx context.Context) error {
+func (s *Storage) Close() error {
 	return s.db.Close()
 }
 
 func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
 	query := `
 		INSERT INTO events 
-		    (id, user_id, title, description, date_start, date_end, notify_before, created_at, updated_at)
-		VALUES (:id, :user_id, :title, :description, :date_start, :date_end, :notify_before, NOW(), NOW())
+		    (id, user_id, title, description, date_start, date_end, created_at, updated_at)
+		VALUES (:id, :user_id, :title, :description, :date_start, :date_end, NOW(), NOW())
 	`
 	_, err := s.db.NamedExecContext(ctx, query, &event)
 
@@ -48,7 +47,11 @@ func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
 func (s *Storage) UpdateEvent(ctx context.Context, event storage.Event) error {
 	query := `
 		UPDATE events
-		SET title=:title, description=:description, date_start=:date_start, date_end=:date_end, notify_before=:notify_before, updated_at=NOW()
+		SET title=:title,
+		    description=:description,
+		    date_start=:date_start,
+		    date_end=:date_end,
+		    updated_at=NOW()
 		WHERE id=:id
 	`
 	res, err := s.db.NamedExecContext(ctx, query, &event)
@@ -96,7 +99,6 @@ func (s *Storage) GetEventsList(ctx context.Context) ([]storage.Event, error) {
 	err := s.db.SelectContext(ctx, &events, query)
 
 	return events, err
-
 }
 
 func (s *Storage) GetEventsCount(ctx context.Context) (int, error) {

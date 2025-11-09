@@ -2,12 +2,12 @@ package memorystorage
 
 import (
 	"context"
-	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
 )
 
 func TestStorage(t *testing.T) {
@@ -54,6 +54,7 @@ func TestStorage(t *testing.T) {
 	require.NoError(t, err)
 
 	getEvent, err = store.GetEvent(ctx, event.ID)
+	require.NoError(t, err)
 	require.Equal(t, event, getEvent)
 
 	// get list
