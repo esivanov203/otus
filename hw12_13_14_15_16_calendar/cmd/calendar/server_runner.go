@@ -3,13 +3,16 @@ package main
 import (
 	"context"
 	"fmt"
+	sqlstorage "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage/sql"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/app"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+
 	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	memorystorage "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage/memory"
 	"github.com/spf13/cobra"
 )
@@ -26,8 +29,18 @@ func runServer(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return fmt.Errorf("initial logger: %w", err)
 	}
-	storage := memorystorage.New()
-	calendar := app.New(logg, storage)
+
+	var store storage.Storage
+	switch cfg.Storage.Type {
+	case "memory":
+		store = memorystorage.New()
+	case "sql":
+		store = sqlstorage.New()
+	default:
+		return fmt.Errorf("unknown storage type: %s", cfg.Storage.Type)
+	}
+
+	calendar := app.New(logg, store)
 
 	// http server
 	server := internalhttp.NewServer(logg, calendar)
