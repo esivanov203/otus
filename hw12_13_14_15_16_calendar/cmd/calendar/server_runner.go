@@ -35,7 +35,11 @@ func runServer(cmd *cobra.Command, args []string) error {
 	case "memory":
 		store = memorystorage.New()
 	case "sql":
-		store = sqlstorage.New()
+		store = sqlstorage.New(cfg.Storage.Dsn)
+		if err := store.Connect(context.Background()); err != nil {
+			return fmt.Errorf("connect to storage: %w", err)
+		}
+		defer func() { _ = store.Close(context.Background()) }()
 	default:
 		return fmt.Errorf("unknown storage type: %s", cfg.Storage.Type)
 	}

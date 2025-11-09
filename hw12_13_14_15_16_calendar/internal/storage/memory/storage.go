@@ -17,6 +17,14 @@ func New() *Storage {
 	}
 }
 
+func (s *Storage) Connect(ctx context.Context) error {
+	return nil
+}
+
+func (s *Storage) Close(ctx context.Context) error {
+	return nil
+}
+
 func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
