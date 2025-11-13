@@ -2,9 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/joho/godotenv"
 	"os"
 
+	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 

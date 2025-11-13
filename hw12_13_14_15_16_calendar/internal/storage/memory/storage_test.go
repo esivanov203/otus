@@ -79,13 +79,13 @@ func TestStorageConcurrencySafety(t *testing.T) {
 
 	wg.Add(goroutines)
 	for i := 0; i < goroutines; i++ {
-		go func(i int) {
+		go func() {
 			defer wg.Done()
-			userId := uuid.New().String()
+			userID := uuid.New().String()
 			for j := 0; j < eventsPerGoroutine; j++ {
 				ev := storage.Event{
 					ID:        uuid.NewString(),
-					UserID:    userId,
+					UserID:    userID,
 					Title:     "Event",
 					DateStart: time.Now().Add(time.Duration(j) * time.Hour),
 					DateEnd:   time.Now().Add(time.Duration(j+1) * time.Hour),
@@ -103,7 +103,7 @@ func TestStorageConcurrencySafety(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, "Updated Event", got.Title)
 			}
-		}(i)
+		}()
 	}
 
 	wg.Wait()

@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
 	"os"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
 	"gopkg.in/yaml.v2"
 )
 

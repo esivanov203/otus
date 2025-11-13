@@ -1,8 +1,9 @@
 package internalhttp
 
 import (
-	"github.com/gorilla/handlers"
 	"net/http"
+
+	"github.com/gorilla/handlers"
 )
 
 func (s *Server) setRouterUses() {

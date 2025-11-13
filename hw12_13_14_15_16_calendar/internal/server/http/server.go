@@ -3,10 +3,10 @@ package internalhttp
 import (
 	"context"
 	"fmt"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/app"
 	"net/http"
 	"time"
 
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/app"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
 	"github.com/gorilla/mux"
 )

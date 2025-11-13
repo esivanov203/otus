@@ -20,6 +20,9 @@ linters-settings:
           - github.com/jmoiron/sqlx
           - github.com/lib/pq
           - github.com/esivanov203/otus/hw12_13_14_15_calendar/internal
+          - github.com/joho/godotenv
+          - github.com/gorilla/mux
+          - github.com/gorilla/handlers
       Test:
         files:
           - $test
