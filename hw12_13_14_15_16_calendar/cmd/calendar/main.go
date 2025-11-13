@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/joho/godotenv"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -28,6 +29,10 @@ func main() {
 		Short: "Show calendar service version",
 		Run:   printVersion,
 	})
+
+	if err := godotenv.Load(); err != nil {
+		fmt.Printf(".env file not found or failed to load: %v\n", err)
+	}
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Printf("initial error on: %v\n", err)

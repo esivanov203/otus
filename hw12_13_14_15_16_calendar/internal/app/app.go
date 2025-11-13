@@ -2,23 +2,28 @@ package app
 
 import (
 	"context"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 )
 
-type App struct { // TODO
+type Application interface {
+	// TODO
 }
 
-type Logger interface { // TODO
+type App struct {
+	storage storage.Storage
+	logger  logger.Logger
 }
 
-type Storage interface { // TODO
-}
-
-func New(logger Logger, storage Storage) *App {
-	return &App{}
+func New(logger logger.Logger, storage storage.Storage) *App {
+	return &App{
+		storage: storage,
+		logger:  logger,
+	}
 }
 
 func (a *App) CreateEvent(ctx context.Context, id, title string) error {
-	// TODO
+
 	return nil
 	// return a.storage.CreateEvent(storage.Event{ID: id, Title: title})
 }

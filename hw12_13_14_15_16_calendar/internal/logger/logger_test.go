@@ -37,7 +37,7 @@ func TestLoggerLevelType(t *testing.T) {
 
 func TestLoggerMethods(t *testing.T) {
 	core, logs := observer.New(zapcore.DebugLevel)
-	l := &Logger{Logger: zap.New(core)}
+	l := &CalLogger{Logger: zap.New(core)}
 
 	l.Debug("debug message")
 	l.Info("info message")

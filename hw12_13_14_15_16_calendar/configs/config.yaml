@@ -7,7 +7,6 @@ server:
   port: 8080
 
 storage:
-#  type: "memory"
-#  dsn: ""
+#  type: "memory" # or "sql"
   type: "sql"
-  dsn: "postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+  dsn: 'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable'

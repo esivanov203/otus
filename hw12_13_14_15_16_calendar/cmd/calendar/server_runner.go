@@ -48,7 +48,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	calendar := app.New(logg, store)
 
 	// http server
-	server := internalhttp.NewServer(logg, calendar)
+	server := internalhttp.NewServer(logg, calendar, cfg.Server)
 
 	// context with cancellation on signal
 	ctx, cancel := signal.NotifyContext(context.Background(),

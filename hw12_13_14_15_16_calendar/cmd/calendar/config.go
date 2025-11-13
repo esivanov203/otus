@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
 	"os"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
@@ -9,14 +10,9 @@ import (
 )
 
 type Config struct {
-	Logger  logger.Conf `yaml:"logger"`
-	Server  ServerConf  `yaml:"server"`
-	Storage StorageConf `yaml:"storage"`
-}
-
-type ServerConf struct {
-	Host string `yaml:"host"` // listen interface
-	Port int    `yaml:"port"` // listen port
+	Logger  logger.Conf             `yaml:"logger"`
+	Server  internalhttp.ServerConf `yaml:"server"`
+	Storage StorageConf             `yaml:"storage"`
 }
 
 type StorageConf struct {
@@ -27,14 +23,13 @@ type StorageConf struct {
 func NewConfig(configFile string) (Config, error) {
 	cfg := Config{}
 
-	f, err := os.Open(configFile)
+	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return cfg, err
 	}
-	defer func() { _ = f.Close() }()
+	expanded := os.ExpandEnv(string(data))
 
-	d := yaml.NewDecoder(f)
-	if err := d.Decode(&cfg); err != nil {
+	if err := yaml.Unmarshal([]byte(expanded), &cfg); err != nil {
 		return cfg, fmt.Errorf("decoding %s: %w", configFile, err)
 	}
 
