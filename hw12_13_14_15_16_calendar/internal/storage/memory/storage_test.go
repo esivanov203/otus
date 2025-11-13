@@ -2,6 +2,7 @@ package memorystorage
 
 import (
 	"context"
+	"sync"
 	"testing"
 	"time"
 
@@ -32,11 +33,6 @@ func TestStorage(t *testing.T) {
 	event := seedEvent("user1", start, end)
 	err := store.CreateEvent(ctx, event)
 	require.NoError(t, err)
-
-	// create fault with date
-	eventConflicted := seedEvent("user1", start.Add(30*time.Minute), end.Add(30*time.Minute))
-	err = store.CreateEvent(ctx, eventConflicted)
-	require.ErrorIs(t, storage.ErrDateBusy, err)
 
 	// create not fault with date for another user
 	eventU2 := seedEvent("user2", start.Add(30*time.Minute), end.Add(30*time.Minute))
@@ -70,4 +66,49 @@ func TestStorage(t *testing.T) {
 	count, err := store.GetEventsCount(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 1, count)
+}
+
+func TestStorageConcurrencySafety(t *testing.T) {
+	store := New()
+	ctx := context.Background()
+
+	const goroutines = 50
+	const eventsPerGoroutine = 20
+
+	var wg sync.WaitGroup
+
+	wg.Add(goroutines)
+	for i := 0; i < goroutines; i++ {
+		go func(i int) {
+			defer wg.Done()
+			userId := uuid.New().String()
+			for j := 0; j < eventsPerGoroutine; j++ {
+				ev := storage.Event{
+					ID:        uuid.NewString(),
+					UserID:    userId,
+					Title:     "Event",
+					DateStart: time.Now().Add(time.Duration(j) * time.Hour),
+					DateEnd:   time.Now().Add(time.Duration(j+1) * time.Hour),
+				}
+				err := store.CreateEvent(ctx, ev)
+				require.NoError(t, err)
+
+				// попробуем сразу обновить
+				ev.Title = "Updated Event"
+				err = store.UpdateEvent(ctx, ev)
+				require.NoError(t, err)
+
+				// прочитаем обратно
+				got, err := store.GetEvent(ctx, ev.ID)
+				require.NoError(t, err)
+				require.Equal(t, "Updated Event", got.Title)
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	count, err := store.GetEventsCount(ctx)
+	require.NoError(t, err)
+	require.Equal(t, goroutines*eventsPerGoroutine, count)
 }

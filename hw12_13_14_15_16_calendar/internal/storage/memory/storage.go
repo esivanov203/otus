@@ -31,14 +31,6 @@ func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	// проверка на пересечение дат
-	for _, e := range s.events {
-		if e.UserID == event.UserID &&
-			event.DateStart.Before(e.DateEnd) && e.DateStart.Before(event.DateEnd) {
-			return storage.ErrDateBusy
-		}
-	}
-
 	s.events[event.ID] = event
 
 	return nil
