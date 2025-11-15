@@ -1,5 +1,11 @@
-[logger]
-level = "INFO"
+logger:
+ level: "INFO"
+ type: "json" # or text
 
-# TODO
-# ...
+server:
+  host: "0.0.0.0"
+  port: 8080
+
+storage:
+  type: "memory" # or "sql"
+  dsn: 'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable'

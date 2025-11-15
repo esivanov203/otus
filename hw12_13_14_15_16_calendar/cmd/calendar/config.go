@@ -1,20 +1,37 @@
 package main
 
-// При желании конфигурацию можно вынести в internal/config.
-// Организация конфига в main принуждает нас сужать API компонентов, использовать
-// при их конструировании только необходимые параметры, а также уменьшает вероятность циклической зависимости.
+import (
+	"fmt"
+	"os"
+
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
+	"gopkg.in/yaml.v2"
+)
+
 type Config struct {
-	Logger LoggerConf
-	// TODO
+	Logger  logger.Conf             `yaml:"logger"`
+	Server  internalhttp.ServerConf `yaml:"server"`
+	Storage StorageConf             `yaml:"storage"`
 }
 
-type LoggerConf struct {
-	Level string
-	// TODO
+type StorageConf struct {
+	Type string `yaml:"type"` // memory, sql
+	Dsn  string `yaml:"dsn"`  // for sql
 }
 
-func NewConfig() Config {
-	return Config{}
-}
+func NewConfig(configFile string) (Config, error) {
+	cfg := Config{}
 
-// TODO
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return cfg, err
+	}
+	expanded := os.ExpandEnv(string(data))
+
+	if err := yaml.Unmarshal([]byte(expanded), &cfg); err != nil {
+		return cfg, fmt.Errorf("decoding %s: %w", configFile, err)
+	}
+
+	return cfg, nil
+}

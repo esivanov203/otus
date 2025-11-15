@@ -1,61 +1,41 @@
 package main
 
 import (
-	"context"
-	"flag"
+	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/app"
-	"github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/logger"
-	internalhttp "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/server/http"
-	memorystorage "github.com/fixme_my_friend/hw12_13_14_15_calendar/internal/storage/memory"
+	"github.com/joho/godotenv"
+	"github.com/spf13/cobra"
 )
 
 var configFile string
 
-func init() {
-	flag.StringVar(&configFile, "config", "/etc/calendar/config.toml", "Path to configuration file")
-}
-
 func main() {
-	flag.Parse()
-
-	if flag.Arg(0) == "version" {
-		printVersion()
-		return
+	rootCmd := &cobra.Command{
+		Use:   "calendar",
+		Short: "Calendar service entrypoint",
+		RunE:  runServer,
 	}
 
-	config := NewConfig()
-	logg := logger.New(config.Logger.Level)
+	rootCmd.PersistentFlags().StringVar(
+		&configFile,
+		"config",
+		"/etc/calendar/config.yaml",
+		"path to configuration file",
+	)
 
-	storage := memorystorage.New()
-	calendar := app.New(logg, storage)
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Show calendar service version",
+		Run:   printVersion,
+	})
 
-	server := internalhttp.NewServer(logg, calendar)
+	if err := godotenv.Load(); err != nil {
+		fmt.Printf(".env file not found or failed to load: %v\n", err)
+	}
 
-	ctx, cancel := signal.NotifyContext(context.Background(),
-		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
-	defer cancel()
-
-	go func() {
-		<-ctx.Done()
-
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer cancel()
-
-		if err := server.Stop(ctx); err != nil {
-			logg.Error("failed to stop http server: " + err.Error())
-		}
-	}()
-
-	logg.Info("calendar is running...")
-
-	if err := server.Start(ctx); err != nil {
-		logg.Error("failed to start http server: " + err.Error())
-		cancel()
-		os.Exit(1) //nolint:gocritic
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Printf("initial error on: %v\n", err)
+		os.Exit(1)
 	}
 }
