@@ -2,8 +2,9 @@ package storage
 
 import (
 	"context"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"time"
+
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 )
 
 type Storage interface {

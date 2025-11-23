@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"time"
 
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgresql driver for sqlx

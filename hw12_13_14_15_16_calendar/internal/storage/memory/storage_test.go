@@ -2,11 +2,11 @@ package memorystorage
 
 import (
 	"context"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"

@@ -2,10 +2,10 @@ package memorystorage
 
 import (
 	"context"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"sync"
 	"time"
 
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 )
 
@@ -84,9 +84,7 @@ func (s *Storage) ListEventsInRange(
 	userID string,
 	from, to time.Time,
 ) ([]model.Event, error) {
-
 	_ = ctx
-
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 

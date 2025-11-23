@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
-	"github.com/google/uuid"
-	"github.com/gorilla/mux"
 	"net/http"
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 )
 
 func (s *Server) rootHandler(w http.ResponseWriter, r *http.Request) {
@@ -31,6 +31,7 @@ func (s *Server) decodeBodyToEvent(w http.ResponseWriter, r *http.Request, handl
 		if errW != nil {
 			s.logger.Error(errW.Error(), logger.Fields{"handler": handlerName, "action": "send response"})
 		}
+		return model.Event{}
 	}
 	return event
 }
@@ -45,16 +46,14 @@ func (s *Server) createHandler(w http.ResponseWriter, r *http.Request) {
 	msg := event.ID
 
 	err := s.app.CreateEvent(r.Context(), event)
-	if err != nil {
-		var ve *model.ValidationError
-		if errors.As(err, &ve) {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		msg = err.Error()
-	} else {
+	switch {
+	case err == nil:
 		w.WriteHeader(http.StatusCreated)
+	case errors.As(err, new(*model.ValidationError)):
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+		msg = err.Error()
 	}
 
 	_, errW := w.Write([]byte(msg))
@@ -70,20 +69,17 @@ func (s *Server) updateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	msg := event.ID
-
 	err := s.app.UpdateEvent(r.Context(), event)
-	if err != nil {
-		var ve *model.ValidationError
-		if errors.As(err, &ve) {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-		} else if errors.Is(err, storage.ErrNotFound) {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		msg = err.Error()
-	} else {
+	switch {
+	case err == nil:
 		w.WriteHeader(http.StatusAccepted)
+	case errors.As(err, new(*model.ValidationError)):
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	case errors.Is(err, storage.ErrNotFound):
+		w.WriteHeader(http.StatusNotFound)
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+		msg = err.Error()
 	}
 
 	_, errW := w.Write([]byte(msg))
@@ -94,56 +90,52 @@ func (s *Server) updateHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-
 	err := s.app.DeleteEvent(r.Context(), id)
-	if err != nil {
-		var ve *model.ValidationError
-		if errors.As(err, &ve) {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-		} else if errors.Is(err, storage.ErrNotFound) {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
+
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.As(err, new(*model.ValidationError)):
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	case errors.Is(err, storage.ErrNotFound):
+		w.WriteHeader(http.StatusNotFound)
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
 		_, errW := w.Write([]byte(err.Error()))
 		if errW != nil {
 			s.logger.Error(errW.Error(), logger.Fields{"handler": "delete", "action": "send response"})
 		}
-	} else {
-		w.WriteHeader(http.StatusNoContent)
 	}
 }
 
 func (s *Server) getOneHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-
 	event, err := s.app.GetEvent(r.Context(), id)
-	if err != nil {
-		var ve *model.ValidationError
-		if errors.As(err, &ve) {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-		} else if errors.Is(err, storage.ErrNotFound) {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		_, errW := w.Write([]byte(err.Error()))
-		if errW != nil {
-			s.logger.Error(errW.Error(), logger.Fields{"handler": "getOne", "action": "send response"})
-		}
-	} else {
+
+	switch {
+	case err == nil:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(event); err != nil {
 			s.logger.Error(err.Error(), logger.Fields{"handler": "getOne", "action": "encode response"})
+		}
+	case errors.As(err, new(*model.ValidationError)):
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	case errors.Is(err, storage.ErrNotFound):
+		w.WriteHeader(http.StatusNotFound)
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+		_, errW := w.Write([]byte(err.Error()))
+		if errW != nil {
+			s.logger.Error(errW.Error(), logger.Fields{"handler": "getOne", "action": "send response"})
 		}
 	}
 }
 
 func (s *Server) getPeriodHandler(w http.ResponseWriter, r *http.Request) {
 	period := mux.Vars(r)["period"]
-	userId := mux.Vars(r)["user_id"]
-	startDate, _ := time.Parse("2006-01-02", mux.Vars(r)["start_date"])
+	userID := mux.Vars(r)["userID"]
+	startDate, _ := time.Parse("2006-01-02", mux.Vars(r)["startDate"])
 
 	var (
 		events       []model.Event
@@ -153,33 +145,31 @@ func (s *Server) getPeriodHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch period {
 	case "day":
-		events, err = s.app.ListEventsForDay(r.Context(), userId, startDate)
+		events, err = s.app.ListEventsForDay(r.Context(), userID, startDate)
 	case "week":
-		events, err = s.app.ListEventsForWeek(r.Context(), userId, startDate)
+		events, err = s.app.ListEventsForWeek(r.Context(), userID, startDate)
 	case "month":
-		events, err = s.app.ListEventsForMonth(r.Context(), userId, startDate)
+		events, err = s.app.ListEventsForMonth(r.Context(), userID, startDate)
 	default:
 		err = fmt.Errorf("invalid period: %w", errBadPeriod)
 	}
 
-	if err != nil {
-		var ve *model.ValidationError
-		if errors.As(err, &ve) {
-			w.WriteHeader(http.StatusUnprocessableEntity)
-		} else if errors.Is(err, errBadPeriod) {
-			w.WriteHeader(http.StatusNotFound)
-		} else {
-			w.WriteHeader(http.StatusInternalServerError)
-		}
-		_, errW := w.Write([]byte(err.Error()))
-		if errW != nil {
-			s.logger.Error(errW.Error(), logger.Fields{"handler": "getPeriod", "action": "send response"})
-		}
-	} else {
+	switch {
+	case err == nil:
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(w).Encode(events); err != nil {
-			s.logger.Error(err.Error(), logger.Fields{"handler": "getPeriods", "action": "encode response"})
+			s.logger.Error(err.Error(), logger.Fields{"handler": "getPeriod", "action": "encode response"})
+		}
+	case errors.As(err, new(*model.ValidationError)):
+		w.WriteHeader(http.StatusUnprocessableEntity)
+	case errors.Is(err, errBadPeriod):
+		w.WriteHeader(http.StatusNotFound)
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
+		_, errW := w.Write([]byte(err.Error()))
+		if errW != nil {
+			s.logger.Error(errW.Error(), logger.Fields{"handler": "getPeriod", "action": "send response"})
 		}
 	}
 }

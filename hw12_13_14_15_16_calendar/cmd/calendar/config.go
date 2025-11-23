@@ -13,7 +13,7 @@ import (
 type Config struct {
 	Logger     logger.Conf                 `yaml:"logger"`
 	Server     internalhttp.ServerConf     `yaml:"server"`
-	GRPCServer internalgrpc.GRPCServerConf `yaml:"grpc_server"`
+	GRPCServer internalgrpc.GRPCServerConf `yaml:"grpcServer"`
 	Storage    StorageConf                 `yaml:"storage"`
 }
 

@@ -8,9 +8,9 @@ type Event struct {
 	ID          string    `db:"id" json:"id"`
 	Title       string    `db:"title" json:"title"`
 	Description string    `db:"description" json:"description"`
-	DateStart   time.Time `db:"date_start" json:"date_start"`
-	DateEnd     time.Time `db:"date_end" json:"date_end"`
-	UserID      string    `db:"user_id" json:"user_id"`
+	DateStart   time.Time `db:"date_start" json:"dateStart"`
+	DateEnd     time.Time `db:"date_end" json:"dateEnd"`
+	UserID      string    `db:"user_id" json:"userId"`
 }
 
 func (e *Event) ValidateCreate() error {

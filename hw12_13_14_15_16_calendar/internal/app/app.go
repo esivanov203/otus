@@ -2,10 +2,10 @@ package app
 
 import (
 	"context"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 )
 

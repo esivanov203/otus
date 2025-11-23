@@ -2,6 +2,7 @@ package internalgrpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 
@@ -53,7 +54,7 @@ func (s *GRPCServer) PrepareListener() error {
 func (s *GRPCServer) Start(chanErr chan struct{}) {
 	s.logger.Info("grpc server starting", logger.Fields{"addr": s.addr})
 
-	if err := s.grpcServer.Serve(s.listener); err != nil && err != grpc.ErrServerStopped {
+	if err := s.grpcServer.Serve(s.listener); err != nil && errors.Is(err, grpc.ErrServerStopped) {
 		s.logger.Error(fmt.Sprintf("grpc server start failed: %v", err), logger.Fields{"addr": s.addr})
 	}
 
