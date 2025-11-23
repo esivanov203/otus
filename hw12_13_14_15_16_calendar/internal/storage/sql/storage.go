@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
@@ -93,21 +94,20 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (storage.Event, error
 	return event, nil
 }
 
-func (s *Storage) GetEventsList(ctx context.Context) ([]storage.Event, error) {
+func (s *Storage) ListEventsInRange(
+	ctx context.Context,
+	userID string,
+	from, to time.Time,
+) ([]storage.Event, error) {
 	var events []storage.Event
-	query := `SELECT id, user_id, title, description, date_start, date_end FROM events`
-	err := s.db.SelectContext(ctx, &events, query)
 
+	query := `
+		SELECT id, user_id, title, description, date_start, date_end
+		FROM events
+		WHERE user_id=$1 AND date_start >= $2 AND date_start < $3
+		ORDER BY date_start
+	`
+
+	err := s.db.SelectContext(ctx, &events, query, userID, from, to)
 	return events, err
-}
-
-func (s *Storage) GetEventsCount(ctx context.Context) (int, error) {
-	var count int
-	query := `SELECT COUNT(*) FROM events`
-	err := s.db.GetContext(ctx, &count, query)
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
 }

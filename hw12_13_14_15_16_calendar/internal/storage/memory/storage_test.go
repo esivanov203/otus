@@ -12,63 +12,58 @@ import (
 )
 
 func TestStorage(t *testing.T) {
-	seedEvent := func(userId string, startTime, endTime time.Time) storage.Event {
+	seedEvent := func(userID string, startTime, endTime time.Time) storage.Event {
 		return storage.Event{
 			ID:          uuid.NewString(),
-			Title:       "Test title",
-			Description: "Test description",
+			UserID:      userID,
+			Title:       "Title",
+			Description: "Description",
 			DateStart:   startTime,
 			DateEnd:     endTime,
-			UserID:      userId,
 		}
 	}
 
 	ctx := context.Background()
 	store := New()
 
-	start := time.Now()
-	end := start.Add(time.Hour)
+	now := time.Now()
+	user1 := "user1"
+	user2 := "user2"
 
-	// create
-	event := seedEvent("user1", start, end)
-	err := store.CreateEvent(ctx, event)
-	require.NoError(t, err)
+	e1 := seedEvent(user1, now, now.Add(time.Hour))
+	e2 := seedEvent(user1, now.Add(2*time.Hour), now.Add(3*time.Hour))
+	e3 := seedEvent(user2, now.Add(30*time.Minute), now.Add(time.Hour+30*time.Minute))
 
-	// create not fault with date for another user
-	eventU2 := seedEvent("user2", start.Add(30*time.Minute), end.Add(30*time.Minute))
-	err = store.CreateEvent(ctx, eventU2)
-	require.NoError(t, err)
+	require.NoError(t, store.CreateEvent(ctx, e1))
+	require.NoError(t, store.CreateEvent(ctx, e2))
+	require.NoError(t, store.CreateEvent(ctx, e3))
 
-	// getOne
-	getEvent, err := store.GetEvent(ctx, event.ID)
+	// проверяем GetEvent
+	got, err := store.GetEvent(ctx, e1.ID)
 	require.NoError(t, err)
-	require.Equal(t, event, getEvent)
+	require.Equal(t, e1, got)
 
-	// update
-	event.Title = "Updated title"
-	err = store.UpdateEvent(ctx, event)
+	// обновляем событие
+	e1.Title = "Updated"
+	require.NoError(t, store.UpdateEvent(ctx, e1))
+	got, err = store.GetEvent(ctx, e1.ID)
 	require.NoError(t, err)
+	require.Equal(t, "Updated", got.Title)
 
-	getEvent, err = store.GetEvent(ctx, event.ID)
+	// проверяем ListEventsInRange для user1
+	from := now.Add(-time.Hour)
+	to := now.Add(4 * time.Hour)
+	events, err := store.ListEventsInRange(ctx, user1, from, to)
 	require.NoError(t, err)
-	require.Equal(t, event, getEvent)
+	require.Len(t, events, 2) // e1 и e2
 
-	// get list
-	list, err := store.GetEventsList(ctx)
-	require.NoError(t, err)
-	require.Len(t, list, 2)
-
-	// delete
-	err = store.DeleteEvent(ctx, event)
-	require.NoError(t, err)
-
-	// count
-	count, err := store.GetEventsCount(ctx)
-	require.NoError(t, err)
-	require.Equal(t, 1, count)
+	// удаление
+	require.NoError(t, store.DeleteEvent(ctx, e1))
+	_, err = store.GetEvent(ctx, e1.ID)
+	require.ErrorIs(t, err, storage.ErrNotFound)
 }
 
-func TestStorageConcurrencySafety(t *testing.T) {
+func TestMemoryStorageConcurrencySafety(t *testing.T) {
 	store := New()
 	ctx := context.Background()
 
@@ -76,12 +71,12 @@ func TestStorageConcurrencySafety(t *testing.T) {
 	const eventsPerGoroutine = 20
 
 	var wg sync.WaitGroup
-
 	wg.Add(goroutines)
+
 	for i := 0; i < goroutines; i++ {
 		go func() {
 			defer wg.Done()
-			userID := uuid.New().String()
+			userID := uuid.NewString()
 			for j := 0; j < eventsPerGoroutine; j++ {
 				ev := storage.Event{
 					ID:        uuid.NewString(),
@@ -90,15 +85,15 @@ func TestStorageConcurrencySafety(t *testing.T) {
 					DateStart: time.Now().Add(time.Duration(j) * time.Hour),
 					DateEnd:   time.Now().Add(time.Duration(j+1) * time.Hour),
 				}
-				err := store.CreateEvent(ctx, ev)
-				require.NoError(t, err)
 
-				// попробуем сразу обновить
+				// Создаем событие
+				require.NoError(t, store.CreateEvent(ctx, ev))
+
+				// Сразу обновляем
 				ev.Title = "Updated Event"
-				err = store.UpdateEvent(ctx, ev)
-				require.NoError(t, err)
+				require.NoError(t, store.UpdateEvent(ctx, ev))
 
-				// прочитаем обратно
+				// Получаем событие
 				got, err := store.GetEvent(ctx, ev.ID)
 				require.NoError(t, err)
 				require.Equal(t, "Updated Event", got.Title)
@@ -108,7 +103,9 @@ func TestStorageConcurrencySafety(t *testing.T) {
 
 	wg.Wait()
 
-	count, err := store.GetEventsCount(ctx)
-	require.NoError(t, err)
+	// Проверяем количество всех событий
+	store.mu.RLock()
+	defer store.mu.RUnlock()
+	count := len(store.events)
 	require.Equal(t, goroutines*eventsPerGoroutine, count)
 }

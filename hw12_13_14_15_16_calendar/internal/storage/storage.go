@@ -1,14 +1,16 @@
 package storage
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type Storage interface {
 	CreateEvent(ctx context.Context, event Event) error
 	UpdateEvent(ctx context.Context, event Event) error
 	DeleteEvent(ctx context.Context, event Event) error
 	GetEvent(ctx context.Context, id string) (Event, error)
-	GetEventsList(ctx context.Context) ([]Event, error)
-	GetEventsCount(ctx context.Context) (int, error)
+	ListEventsInRange(ctx context.Context, userID string, from, to time.Time) ([]Event, error)
 
 	Connect() error
 	Close() error

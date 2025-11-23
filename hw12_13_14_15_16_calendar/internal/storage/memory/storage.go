@@ -3,6 +3,7 @@ package memorystorage
 import (
 	"context"
 	"sync"
+	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 )
@@ -77,23 +78,33 @@ func (s *Storage) GetEvent(ctx context.Context, id string) (storage.Event, error
 	return e, nil
 }
 
-func (s *Storage) GetEventsList(ctx context.Context) ([]storage.Event, error) {
+func (s *Storage) ListEventsInRange(
+	ctx context.Context,
+	userID string,
+	from, to time.Time,
+) ([]storage.Event, error) {
+
 	_ = ctx
+
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	list := make([]storage.Event, 0, len(s.events))
+	result := make([]storage.Event, 0)
+
 	for _, e := range s.events {
-		list = append(list, e)
+		if e.UserID != userID {
+			continue
+		}
+
+		if !e.DateStart.Before(to) {
+			continue
+		}
+		if e.DateStart.Before(from) {
+			continue
+		}
+
+		result = append(result, e)
 	}
 
-	return list, nil
-}
-
-func (s *Storage) GetEventsCount(ctx context.Context) (int, error) {
-	_ = ctx
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return len(s.events), nil
+	return result, nil
 }
