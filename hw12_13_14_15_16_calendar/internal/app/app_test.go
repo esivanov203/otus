@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"sync"
 	"testing"
 	"time"
@@ -25,7 +26,7 @@ func TestApp_CreateEventValidation(t *testing.T) {
 	ctx := context.Background()
 
 	// id/userID пустые
-	err := app.CreateEvent(ctx, EventDTO{
+	err := app.CreateEvent(ctx, model.Event{
 		ID:          "",
 		UserID:      "",
 		Title:       "Title",
@@ -36,7 +37,7 @@ func TestApp_CreateEventValidation(t *testing.T) {
 	require.Error(t, err)
 
 	// title пустой
-	err = app.CreateEvent(ctx, EventDTO{
+	err = app.CreateEvent(ctx, model.Event{
 		ID:          "id",
 		UserID:      "user",
 		Title:       "",
@@ -47,7 +48,7 @@ func TestApp_CreateEventValidation(t *testing.T) {
 	require.Error(t, err)
 
 	// start после end
-	err = app.CreateEvent(ctx, EventDTO{
+	err = app.CreateEvent(ctx, model.Event{
 		ID:          "id",
 		UserID:      "user",
 		Title:       "Title",
@@ -69,7 +70,7 @@ func TestApp_CreateUpdateDeleteEvent(t *testing.T) {
 	end := start.Add(time.Hour)
 
 	// Create
-	err := app.CreateEvent(ctx, EventDTO{
+	err := app.CreateEvent(ctx, model.Event{
 		ID:          id,
 		UserID:      userID,
 		Title:       "Title",
@@ -86,7 +87,7 @@ func TestApp_CreateUpdateDeleteEvent(t *testing.T) {
 	require.Equal(t, "Desc", ev.Description)
 
 	// Update
-	err = app.UpdateEvent(ctx, EventDTO{
+	err = app.UpdateEvent(ctx, model.Event{
 		ID:          id,
 		Title:       "Updated",
 		Description: "Updated Desc",
@@ -115,7 +116,7 @@ func TestApp_ListAndCountEvents(t *testing.T) {
 	// Создадим несколько событий
 	for i := 0; i < 5; i++ {
 		id := uuid.NewString()
-		err := app.CreateEvent(ctx, EventDTO{
+		err := app.CreateEvent(ctx, model.Event{
 			ID:          id,
 			UserID:      "user1",
 			Title:       "Title",
@@ -125,14 +126,72 @@ func TestApp_ListAndCountEvents(t *testing.T) {
 		})
 		require.NoError(t, err)
 	}
+}
 
-	list, err := app.ListEvents(ctx)
-	require.NoError(t, err)
-	require.Len(t, list, 5)
+func TestListEventsForDayWeekMonth(t *testing.T) {
+	store := memorystorage.New()
+	app := newTestApp(store)
+	ctx := context.Background()
 
-	count, err := app.CountEvents(ctx)
+	userID := "user1"
+
+	baseDate := time.Date(2025, 1, 15, 10, 0, 0, 0, time.UTC)
+
+	// Создаём события:
+	events := []model.Event{
+		{
+			ID:          uuid.NewString(),
+			UserID:      userID,
+			Title:       "Day event",
+			Description: "event for same day",
+			DateStart:   baseDate,
+			DateEnd:     baseDate.Add(time.Hour),
+		},
+		{
+			ID:          uuid.NewString(),
+			UserID:      userID,
+			Title:       "Same week event",
+			Description: "event for same week",
+			DateStart:   baseDate.AddDate(0, 0, 2), // +2 дня
+			DateEnd:     baseDate.AddDate(0, 0, 2).Add(time.Hour),
+		},
+		{
+			ID:          uuid.NewString(),
+			UserID:      userID,
+			Title:       "Same month event",
+			Description: "event for same month",
+			DateStart:   baseDate.AddDate(0, 0, 10), // +10 дней
+			DateEnd:     baseDate.AddDate(0, 0, 10).Add(time.Hour),
+		},
+	}
+
+	for _, e := range events {
+		require.NoError(t, app.CreateEvent(ctx, e))
+	}
+
+	listDay, err := app.ListEventsForDay(ctx, userID, baseDate)
 	require.NoError(t, err)
-	require.Equal(t, 5, count)
+	require.Len(t, listDay, 1)
+	require.Equal(t, "Day event", listDay[0].Title)
+
+	listWeek, err := app.ListEventsForWeek(ctx, userID, baseDate)
+	require.NoError(t, err)
+	require.Len(t, listWeek, 2) // day + week
+	titlesWeek := []string{listWeek[0].Title, listWeek[1].Title}
+	require.Contains(t, titlesWeek, "Day event")
+	require.Contains(t, titlesWeek, "Same week event")
+
+	listMonth, err := app.ListEventsForMonth(ctx, userID, baseDate)
+	require.NoError(t, err)
+	require.Len(t, listMonth, 3)
+	titlesMonth := []string{
+		listMonth[0].Title,
+		listMonth[1].Title,
+		listMonth[2].Title,
+	}
+	require.Contains(t, titlesMonth, "Day event")
+	require.Contains(t, titlesMonth, "Same week event")
+	require.Contains(t, titlesMonth, "Same month event")
 }
 
 func TestApp_ConcurrencySafety(t *testing.T) {
@@ -155,9 +214,9 @@ func TestApp_ConcurrencySafety(t *testing.T) {
 				start := time.Now().Add(time.Minute * time.Duration(j))
 				end := start.Add(time.Minute * 30)
 
-				err := app.CreateEvent(ctx, EventDTO{
+				err := app.CreateEvent(ctx, model.Event{
 					ID:          id,
-					UserID:      "user" + fmt.Sprint(i),
+					UserID:      fmt.Sprintf("user%d", i),
 					Title:       "Title",
 					Description: "Desc",
 					DateStart:   start,
@@ -177,7 +236,14 @@ func TestApp_ConcurrencySafety(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	count, err := app.CountEvents(ctx)
-	require.NoError(t, err)
-	require.Equal(t, goroutines*eventsPerGoroutine, count)
+	total := 0
+	now := time.Now()
+	for i := 0; i < goroutines; i++ {
+		userID := fmt.Sprintf("user%d", i)
+		events, err := app.ListEventsForMonth(ctx, userID, now)
+		require.NoError(t, err)
+		total += len(events)
+	}
+
+	require.Equal(t, goroutines*eventsPerGoroutine, total)
 }

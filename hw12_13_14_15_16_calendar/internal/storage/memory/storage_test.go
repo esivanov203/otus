@@ -2,6 +2,7 @@ package memorystorage
 
 import (
 	"context"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"sync"
 	"testing"
 	"time"
@@ -12,8 +13,8 @@ import (
 )
 
 func TestStorage(t *testing.T) {
-	seedEvent := func(userID string, startTime, endTime time.Time) storage.Event {
-		return storage.Event{
+	seedEvent := func(userID string, startTime, endTime time.Time) model.Event {
+		return model.Event{
 			ID:          uuid.NewString(),
 			UserID:      userID,
 			Title:       "Title",
@@ -58,7 +59,7 @@ func TestStorage(t *testing.T) {
 	require.Len(t, events, 2) // e1 и e2
 
 	// удаление
-	require.NoError(t, store.DeleteEvent(ctx, e1))
+	require.NoError(t, store.DeleteEvent(ctx, e1.ID))
 	_, err = store.GetEvent(ctx, e1.ID)
 	require.ErrorIs(t, err, storage.ErrNotFound)
 }
@@ -78,7 +79,7 @@ func TestMemoryStorageConcurrencySafety(t *testing.T) {
 			defer wg.Done()
 			userID := uuid.NewString()
 			for j := 0; j < eventsPerGoroutine; j++ {
-				ev := storage.Event{
+				ev := model.Event{
 					ID:        uuid.NewString(),
 					UserID:    userID,
 					Title:     "Event",

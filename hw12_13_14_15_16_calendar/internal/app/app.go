@@ -2,35 +2,24 @@ package app
 
 import (
 	"context"
-	"errors"
-	"fmt"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 )
 
-// EventDTO — входная структура для создания/обновления события.
-type EventDTO struct {
-	ID          string
-	UserID      string
-	Title       string
-	Description string
-	DateStart   time.Time
-	DateEnd     time.Time
-}
-
-// Application — интерфейс бизнес-логики.
 type Application interface {
-	CreateEvent(ctx context.Context, dto EventDTO) error
-	UpdateEvent(ctx context.Context, dto EventDTO) error
+	CreateEvent(ctx context.Context, event model.Event) error
+	UpdateEvent(ctx context.Context, event model.Event) error
 	DeleteEvent(ctx context.Context, id string) error
-	GetEvent(ctx context.Context, id string) (storage.Event, error)
-	ListEvents(ctx context.Context) ([]storage.Event, error)
-	CountEvents(ctx context.Context) (int, error)
+	GetEvent(ctx context.Context, id string) (model.Event, error)
+
+	ListEventsForDay(ctx context.Context, userID string, date time.Time) ([]model.Event, error)
+	ListEventsForWeek(ctx context.Context, userID string, weekStart time.Time) ([]model.Event, error)
+	ListEventsForMonth(ctx context.Context, userID string, monthStart time.Time) ([]model.Event, error)
 }
 
-// App — реализация Application.
 type App struct {
 	storage storage.Storage
 	logger  logger.Logger
@@ -40,74 +29,91 @@ func New(logg logger.Logger, storage storage.Storage) *App {
 	return &App{storage: storage, logger: logg}
 }
 
-// CreateEvent создаёт новое событие.
-func (a *App) CreateEvent(ctx context.Context, dto EventDTO) error {
-	if dto.ID == "" || dto.UserID == "" {
-		return errors.New("id and userID are required")
-	}
-	if dto.Title == "" {
-		return errors.New("title is required")
-	}
-	if dto.DateStart.After(dto.DateEnd) {
-		return fmt.Errorf("start date must be before end date")
+func (a *App) CreateEvent(ctx context.Context, event model.Event) error {
+	if err := event.ValidateCreate(); err != nil {
+		return err
 	}
 
-	event := storage.Event{
-		ID:          dto.ID,
-		UserID:      dto.UserID,
-		Title:       dto.Title,
-		Description: dto.Description,
-		DateStart:   dto.DateStart,
-		DateEnd:     dto.DateEnd,
+	err := a.storage.CreateEvent(ctx, event)
+	if err != nil {
+		a.logger.Error(err.Error(), logger.Fields{"app": "create event", "title": event.Title})
+		return err
 	}
 
-	return a.storage.CreateEvent(ctx, event)
+	a.logger.Info("success created", logger.Fields{"app": "create event", "title": event.Title})
+	return nil
 }
 
-// UpdateEvent обновляет событие.
-func (a *App) UpdateEvent(ctx context.Context, dto EventDTO) error {
-	if dto.ID == "" {
-		return errors.New("id is required")
-	}
-	if dto.DateStart.After(dto.DateEnd) {
-		return fmt.Errorf("start date must be before end date")
+func (a *App) UpdateEvent(ctx context.Context, event model.Event) error {
+	if err := event.ValidateUpdate(); err != nil {
+		return err
 	}
 
-	event := storage.Event{
-		ID:          dto.ID,
-		Title:       dto.Title,
-		Description: dto.Description,
-		DateStart:   dto.DateStart,
-		DateEnd:     dto.DateEnd,
+	err := a.storage.UpdateEvent(ctx, event)
+	if err != nil {
+		a.logger.Error(err.Error(), logger.Fields{"app": "update event", "id": event.ID})
+		return err
 	}
 
-	return a.storage.UpdateEvent(ctx, event)
+	a.logger.Info("success updated", logger.Fields{"app": "update event", "id": event.ID})
+	return nil
 }
 
-// DeleteEvent удаляет событие по ID.
 func (a *App) DeleteEvent(ctx context.Context, id string) error {
-	if id == "" {
-		return errors.New("id is required")
+	event := model.Event{ID: id}
+	if err := event.ValidateOne(); err != nil {
+		return err
 	}
 
-	event := storage.Event{ID: id}
-	return a.storage.DeleteEvent(ctx, event)
+	return a.storage.DeleteEvent(ctx, id)
 }
 
-// GetEvent получает событие по ID.
-func (a *App) GetEvent(ctx context.Context, id string) (storage.Event, error) {
-	if id == "" {
-		return storage.Event{}, errors.New("id is required")
+func (a *App) GetEvent(ctx context.Context, id string) (model.Event, error) {
+	event := model.Event{ID: id}
+	if err := event.ValidateOne(); err != nil {
+		return event, err
 	}
+
 	return a.storage.GetEvent(ctx, id)
 }
 
-// ListEvents возвращает все события.
-func (a *App) ListEvents(ctx context.Context) ([]storage.Event, error) {
-	return a.storage.GetEventsList(ctx)
+func (a *App) ListEventsForDay(ctx context.Context, userID string, date time.Time) ([]model.Event, error) {
+	event := model.Event{
+		UserID:    userID,
+		DateStart: date,
+	}
+	if err := event.ValidateList(); err != nil {
+		return nil, err
+	}
+	start := date.Truncate(24 * time.Hour)
+	end := start.Add(24 * time.Hour)
+	return a.storage.ListEventsInRange(ctx, userID, start, end)
 }
 
-// CountEvents возвращает количество событий.
-func (a *App) CountEvents(ctx context.Context) (int, error) {
-	return a.storage.GetEventsCount(ctx)
+func (a *App) ListEventsForWeek(ctx context.Context, userID string, weekStart time.Time) ([]model.Event, error) {
+	event := model.Event{
+		UserID:    userID,
+		DateStart: weekStart,
+	}
+	if err := event.ValidateList(); err != nil {
+		return nil, err
+	}
+
+	start := weekStart.Truncate(24 * time.Hour)
+	end := start.Add(7 * 24 * time.Hour)
+	return a.storage.ListEventsInRange(ctx, userID, start, end)
+}
+
+func (a *App) ListEventsForMonth(ctx context.Context, userID string, monthStart time.Time) ([]model.Event, error) {
+	event := model.Event{
+		UserID:    userID,
+		DateStart: monthStart,
+	}
+	if err := event.ValidateList(); err != nil {
+		return nil, err
+	}
+
+	start := monthStart.Truncate(24 * time.Hour)
+	end := start.AddDate(0, 1, 0)
+	return a.storage.ListEventsInRange(ctx, userID, start, end)
 }
