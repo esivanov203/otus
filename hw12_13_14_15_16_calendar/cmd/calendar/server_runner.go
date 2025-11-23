@@ -9,6 +9,7 @@ import (
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/app"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	internalgrpc "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/grpc"
 	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	memorystorage "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage/memory"
@@ -38,6 +39,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	case "sql":
 		store = sqlstorage.New(cfg.Storage.Dsn)
 		if err := store.Connect(); err != nil {
+			logg.Error(fmt.Sprintf("connect to storage: %v", err))
 			return fmt.Errorf("connect to storage: %w", err)
 		}
 		defer func() { _ = store.Close() }()
@@ -47,26 +49,43 @@ func runServer(cmd *cobra.Command, args []string) error {
 
 	calendar := app.New(logg, store)
 
-	// http server
 	server := internalhttp.NewServer(logg, calendar, cfg.Server)
+	grpcServer := internalgrpc.NewServer(logg, calendar, cfg.GRPCServer)
 
 	// context with cancellation on signal
 	ctx, cancel := signal.NotifyContext(context.Background(),
 		syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer cancel()
 
-	// graceful shutdown handler
-	go func() {
-		<-ctx.Done()
-		shdCtx, shdcancel := context.WithTimeout(context.Background(), time.Second*3)
-		defer shdcancel()
-		if err := server.Stop(shdCtx); err != nil {
-			logg.Error("failed to stop http server: " + err.Error())
-		}
-	}()
-
 	logg.Info("calendar is running...")
 
-	// start http server (blocking)
-	return server.Start(ctx)
+	if err := grpcServer.PrepareListener(); err != nil {
+		logg.Error(fmt.Sprintf("prepare listener: %v", err))
+		return fmt.Errorf("prepare listener: %w", err)
+	}
+
+	// канал для сигнализации о падении любого сервера
+	errCh := make(chan struct{}, 1)
+
+	// запускаем серверы
+	go server.Start(errCh)
+	go grpcServer.Start(errCh)
+
+	// ждём либо cancellation on signal, либо падение любого сервера
+	select {
+	case <-ctx.Done():
+	case <-errCh:
+		cancel()
+	}
+
+	// graceful shutdown
+	shdCtx, shdcancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer shdcancel()
+
+	server.Stop(shdCtx)
+	grpcServer.Stop(shdCtx)
+
+	logg.Info("calendar stopped")
+
+	return nil
 }

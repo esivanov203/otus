@@ -7,11 +7,19 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 MIGRATIONS_DIR := ./migrations
 ENV_FILE := ./.env
 
+PROTO_DIR="./proto"
+PROTO_OUT="./proto"
+
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
 	$(BIN) --config=./configs/config.yaml
+
+generate:
+	protoc -I=$(PROTO_DIR) --go_out=$(PROTO_OUT) --go_opt=paths=source_relative \
+		--go-grpc_out=$(PROTO_OUT) --go-grpc_opt=paths=source_relative \
+		$(PROTO_DIR)/*.proto
 
 build-img:
 	docker build \
