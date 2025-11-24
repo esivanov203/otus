@@ -46,11 +46,14 @@ func (s *Server) createHandler(w http.ResponseWriter, r *http.Request) {
 	msg := event.ID
 
 	err := s.app.CreateEvent(r.Context(), event)
+
+	var ve model.ValidationError
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusCreated)
-	case errors.As(err, new(*model.ValidationError)):
+	case errors.As(err, &ve):
 		w.WriteHeader(http.StatusUnprocessableEntity)
+		msg = err.Error()
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 		msg = err.Error()
@@ -70,13 +73,18 @@ func (s *Server) updateHandler(w http.ResponseWriter, r *http.Request) {
 
 	msg := event.ID
 	err := s.app.UpdateEvent(r.Context(), event)
+
+	var ve model.ValidationError
+
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusAccepted)
-	case errors.As(err, new(*model.ValidationError)):
+	case errors.As(err, &ve):
 		w.WriteHeader(http.StatusUnprocessableEntity)
+		msg = err.Error()
 	case errors.Is(err, storage.ErrNotFound):
 		w.WriteHeader(http.StatusNotFound)
+		msg = err.Error()
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 		msg = err.Error()
@@ -92,19 +100,24 @@ func (s *Server) deleteHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	err := s.app.DeleteEvent(r.Context(), id)
 
+	msg := ""
+	var ve model.ValidationError
 	switch {
 	case err == nil:
 		w.WriteHeader(http.StatusNoContent)
-	case errors.As(err, new(*model.ValidationError)):
+	case errors.As(err, &ve):
 		w.WriteHeader(http.StatusUnprocessableEntity)
+		msg = err.Error()
 	case errors.Is(err, storage.ErrNotFound):
 		w.WriteHeader(http.StatusNotFound)
+		msg = err.Error()
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
-		_, errW := w.Write([]byte(err.Error()))
-		if errW != nil {
-			s.logger.Error(errW.Error(), logger.Fields{"handler": "delete", "action": "send response"})
-		}
+		msg = err.Error()
+	}
+	_, errW := w.Write([]byte(msg))
+	if errW != nil {
+		s.logger.Error(errW.Error(), logger.Fields{"handler": "delete", "action": "send response"})
 	}
 }
 
@@ -112,6 +125,9 @@ func (s *Server) getOneHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	event, err := s.app.GetEvent(r.Context(), id)
 
+	msg := ""
+
+	var ve model.ValidationError
 	switch {
 	case err == nil:
 		w.Header().Set("Content-Type", "application/json")
@@ -119,16 +135,19 @@ func (s *Server) getOneHandler(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewEncoder(w).Encode(event); err != nil {
 			s.logger.Error(err.Error(), logger.Fields{"handler": "getOne", "action": "encode response"})
 		}
-	case errors.As(err, new(*model.ValidationError)):
+	case errors.As(err, &ve):
 		w.WriteHeader(http.StatusUnprocessableEntity)
+		msg = err.Error()
 	case errors.Is(err, storage.ErrNotFound):
 		w.WriteHeader(http.StatusNotFound)
+		msg = err.Error()
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
-		_, errW := w.Write([]byte(err.Error()))
-		if errW != nil {
-			s.logger.Error(errW.Error(), logger.Fields{"handler": "getOne", "action": "send response"})
-		}
+		msg = err.Error()
+	}
+	_, errW := w.Write([]byte(msg))
+	if errW != nil {
+		s.logger.Error(errW.Error(), logger.Fields{"handler": "getOne", "action": "send response"})
 	}
 }
 
@@ -154,6 +173,7 @@ func (s *Server) getPeriodHandler(w http.ResponseWriter, r *http.Request) {
 		err = fmt.Errorf("param: %w", errBadPeriod)
 	}
 
+	var ve model.ValidationError
 	switch {
 	case err == nil:
 		w.Header().Set("Content-Type", "application/json")
@@ -162,7 +182,7 @@ func (s *Server) getPeriodHandler(w http.ResponseWriter, r *http.Request) {
 			s.logger.Error(err.Error(), logger.Fields{"handler": "getPeriod", "action": "encode response"})
 		}
 		return
-	case errors.As(err, new(*model.ValidationError)):
+	case errors.As(err, &ve):
 		w.WriteHeader(http.StatusUnprocessableEntity)
 	case errors.Is(err, errBadPeriod):
 		w.WriteHeader(http.StatusUnprocessableEntity)
