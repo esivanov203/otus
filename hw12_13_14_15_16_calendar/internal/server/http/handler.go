@@ -133,9 +133,9 @@ func (s *Server) getOneHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) getPeriodHandler(w http.ResponseWriter, r *http.Request) {
-	period := mux.Vars(r)["period"]
-	userID := mux.Vars(r)["userID"]
-	startDate, _ := time.Parse("2006-01-02", mux.Vars(r)["startDate"])
+	period := r.URL.Query().Get("period")
+	userID := r.URL.Query().Get("userId")
+	startDate, _ := time.Parse("2006-01-02", r.URL.Query().Get("startDate"))
 
 	var (
 		events       []model.Event
@@ -151,7 +151,7 @@ func (s *Server) getPeriodHandler(w http.ResponseWriter, r *http.Request) {
 	case "month":
 		events, err = s.app.ListEventsForMonth(r.Context(), userID, startDate)
 	default:
-		err = fmt.Errorf("invalid period: %w", errBadPeriod)
+		err = fmt.Errorf("param: %w", errBadPeriod)
 	}
 
 	switch {
@@ -161,15 +161,16 @@ func (s *Server) getPeriodHandler(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewEncoder(w).Encode(events); err != nil {
 			s.logger.Error(err.Error(), logger.Fields{"handler": "getPeriod", "action": "encode response"})
 		}
+		return
 	case errors.As(err, new(*model.ValidationError)):
 		w.WriteHeader(http.StatusUnprocessableEntity)
 	case errors.Is(err, errBadPeriod):
-		w.WriteHeader(http.StatusNotFound)
+		w.WriteHeader(http.StatusUnprocessableEntity)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
-		_, errW := w.Write([]byte(err.Error()))
-		if errW != nil {
-			s.logger.Error(errW.Error(), logger.Fields{"handler": "getPeriod", "action": "send response"})
-		}
+	}
+	_, errW := w.Write([]byte(err.Error()))
+	if errW != nil {
+		s.logger.Error(errW.Error(), logger.Fields{"handler": "getPeriod", "action": "send response"})
 	}
 }

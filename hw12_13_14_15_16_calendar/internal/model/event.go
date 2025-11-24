@@ -57,6 +57,10 @@ func (e *Event) ValidateOne() error {
 	if e.ID == "" {
 		ve.addMessage(emptyID)
 	}
+
+	if len(ve.Messages) > 0 {
+		return ve
+	}
 	return nil
 }
 
@@ -64,10 +68,14 @@ func (e *Event) ValidateList() error {
 	var ve ValidationError
 
 	if e.UserID == "" {
-		ve.addMessage(emptyID)
+		ve.addMessage(emptyUserID)
 	}
 	if e.DateStart.IsZero() {
 		ve.addMessage(emptyDate)
+	}
+
+	if len(ve.Messages) > 0 {
+		return ve
 	}
 	return nil
 }

@@ -9,7 +9,7 @@ const (
 	emptyUserID          = "user ID is required"
 	emptyEventTitle      = "title is required"
 	startDateMoreEndDate = "start date must be before end date"
-	emptyDate            = "tart date is required or invalid format"
+	emptyDate            = "start date is required or invalid format"
 )
 
 type ValidationError struct {
