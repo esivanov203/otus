@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package calendar;
+option go_package = "github.com/esivanov203/otus/hw12_13_14_15_calendar/proto;proto";
+
+import "event.proto";
+import "google/protobuf/empty.proto";
+
+service CalendarService {
+  rpc CreateEvent (CreateEventRequest) returns (EventResponse);
+  rpc UpdateEvent (UpdateEventRequest) returns (EventResponse);
+  rpc DeleteEvent (DeleteEventRequest) returns (DeleteEventResponse);
+
+  rpc GetEvent (EventRequest) returns (EventResponse);
+  rpc ListEventsPeriod (ListRequest) returns (ListResponse);
+
+  rpc Welcome (google.protobuf.Empty) returns (WelcomeResponse);}
+
+message WelcomeResponse {
+  string message = 1;
+}
+
+message CreateEventRequest {
+  Event event = 1;
+}
+
+message UpdateEventRequest {
+  Event event = 1;
+}
+
+message DeleteEventRequest {
+  string id = 1;
+}
+
+message EventRequest {
+  string id = 1;
+}
+
+message ListRequest {
+  string user_id = 1;
+  int64 date = 2;
+  string period = 3;
+}
+
+message EventResponse {
+  Event event = 1;
+}
+
+message DeleteEventResponse {
+}
+
+message ListResponse {
+  repeated Event event = 1;
+}

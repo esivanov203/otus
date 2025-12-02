@@ -44,20 +44,21 @@ func NewServer(logger logger.Logger, app app.Application, cfg ServerConf) *Serve
 	return s
 }
 
-func (s *Server) Start(ctx context.Context) error {
-	go func() {
-		if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			s.logger.Error("http server start failed", logger.Fields{"addr": s.httpServer.Addr})
-		}
-	}()
+func (s *Server) Start(chanErr chan struct{}) {
 	s.logger.Info("http server starting", logger.Fields{"addr": s.httpServer.Addr})
-	<-ctx.Done()
-
-	return s.Stop(context.Background())
+	if err := s.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		s.logger.Error("http server start failed", logger.Fields{"addr": s.httpServer.Addr})
+	}
+	// если сервер завершился сигнализируем
+	select {
+	case chanErr <- struct{}{}:
+	default:
+	}
 }
 
-func (s *Server) Stop(ctx context.Context) error {
+func (s *Server) Stop(ctx context.Context) {
 	s.logger.Info("http server stopping", logger.Fields{"addr": s.httpServer.Addr})
-
-	return s.httpServer.Shutdown(ctx)
+	if err := s.httpServer.Shutdown(ctx); err != nil {
+		s.logger.Error("http server shutdown failed")
+	}
 }

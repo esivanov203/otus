@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/model"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/storage"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq" // postgresql driver for sqlx
@@ -33,7 +35,7 @@ func (s *Storage) Close() error {
 	return s.db.Close()
 }
 
-func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
+func (s *Storage) CreateEvent(ctx context.Context, event model.Event) error {
 	query := `
 		INSERT INTO events 
 		    (id, user_id, title, description, date_start, date_end, created_at, updated_at)
@@ -44,7 +46,7 @@ func (s *Storage) CreateEvent(ctx context.Context, event storage.Event) error {
 	return err
 }
 
-func (s *Storage) UpdateEvent(ctx context.Context, event storage.Event) error {
+func (s *Storage) UpdateEvent(ctx context.Context, event model.Event) error {
 	query := `
 		UPDATE events
 		SET title=:title,
@@ -66,8 +68,8 @@ func (s *Storage) UpdateEvent(ctx context.Context, event storage.Event) error {
 	return nil
 }
 
-func (s *Storage) DeleteEvent(ctx context.Context, event storage.Event) error {
-	res, err := s.db.ExecContext(ctx, "DELETE FROM events WHERE id = $1", event.ID)
+func (s *Storage) DeleteEvent(ctx context.Context, id string) error {
+	res, err := s.db.ExecContext(ctx, "DELETE FROM events WHERE id = $1", id)
 	if err != nil {
 		return err
 	}
@@ -79,35 +81,34 @@ func (s *Storage) DeleteEvent(ctx context.Context, event storage.Event) error {
 	return nil
 }
 
-func (s *Storage) GetEvent(ctx context.Context, id string) (storage.Event, error) {
-	var event storage.Event
+func (s *Storage) GetEvent(ctx context.Context, id string) (model.Event, error) {
+	var event model.Event
 	query := `SELECT id, user_id, title, description, date_start, date_end FROM events WHERE id=$1`
 	err := s.db.GetContext(ctx, &event, query, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return storage.Event{}, storage.ErrNotFound
+			return model.Event{}, storage.ErrNotFound
 		}
-		return storage.Event{}, err
+		return model.Event{}, err
 	}
 
 	return event, nil
 }
 
-func (s *Storage) GetEventsList(ctx context.Context) ([]storage.Event, error) {
-	var events []storage.Event
-	query := `SELECT id, user_id, title, description, date_start, date_end FROM events`
-	err := s.db.SelectContext(ctx, &events, query)
+func (s *Storage) ListEventsInRange(
+	ctx context.Context,
+	userID string,
+	from, to time.Time,
+) ([]model.Event, error) {
+	var events []model.Event
 
+	query := `
+		SELECT id, user_id, title, description, date_start, date_end
+		FROM events
+		WHERE user_id=$1 AND date_start >= $2 AND date_start < $3
+		ORDER BY date_start
+	`
+
+	err := s.db.SelectContext(ctx, &events, query, userID, from, to)
 	return events, err
-}
-
-func (s *Storage) GetEventsCount(ctx context.Context) (int, error) {
-	var count int
-	query := `SELECT COUNT(*) FROM events`
-	err := s.db.GetContext(ctx, &count, query)
-	if err != nil {
-		return 0, err
-	}
-
-	return count, nil
 }

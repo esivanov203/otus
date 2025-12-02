@@ -19,10 +19,13 @@ linters-settings:
           - github.com/spf13/cobra
           - github.com/jmoiron/sqlx
           - github.com/lib/pq
+          - github.com/google/uuid
           - github.com/esivanov203/otus/hw12_13_14_15_calendar/internal
+          - github.com/esivanov203/otus/hw12_13_14_15_calendar/proto
           - github.com/joho/godotenv
           - github.com/gorilla/mux
           - github.com/gorilla/handlers
+          - github.com/stretchr/testify/mock
       Test:
         files:
           - $test
@@ -31,6 +34,8 @@ linters-settings:
           - github.com/stretchr/testify
           - github.com/google/uuid
           - github.com/esivanov203/otus/hw12_13_14_15_calendar/internal
+          - github.com/esivanov203/otus/hw12_13_14_15_calendar/proto
+          - github.com/gorilla/mux
 issues:
   exclude-rules:
     - path: _test\.go

@@ -7,9 +7,9 @@ on:
 
 env:
   GO111MODULE: "on"
-  GOLANG_VERSION: ~1.23
+  GOLANG_VERSION: 1.24
   GOLANGCI_LINT_VERSION: v1.63.4
-  
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -74,11 +74,11 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v3
 
-# устанавливаем конкретную версию golangci-lint
+      # устанавливаем golangci-lint, собирая его Go 1.24
       - name: Install golangci-lint ${{ env.GOLANGCI_LINT_VERSION }}
         run: |
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh \
-            | sh -s -- -b $(go env GOPATH)/bin ${{ env.GOLANGCI_LINT_VERSION }}
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@${{ env.GOLANGCI_LINT_VERSION }}
+          export PATH="$PATH:$(go env GOPATH)/bin"
           golangci-lint --version
 
       - name: make lint

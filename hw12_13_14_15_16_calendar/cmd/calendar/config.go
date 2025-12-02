@@ -5,14 +5,16 @@ import (
 	"os"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	internalgrpc "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/grpc"
 	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
 	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
-	Logger  logger.Conf             `yaml:"logger"`
-	Server  internalhttp.ServerConf `yaml:"server"`
-	Storage StorageConf             `yaml:"storage"`
+	Logger     logger.Conf                 `yaml:"logger"`
+	Server     internalhttp.ServerConf     `yaml:"server"`
+	GRPCServer internalgrpc.GRPCServerConf `yaml:"grpcServer"`
+	Storage    StorageConf                 `yaml:"storage"`
 }
 
 type StorageConf struct {

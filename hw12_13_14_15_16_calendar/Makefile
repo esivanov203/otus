@@ -7,11 +7,19 @@ LDFLAGS := -X main.release="develop" -X main.buildDate=$(shell date -u +%Y-%m-%d
 MIGRATIONS_DIR := ./migrations
 ENV_FILE := ./.env
 
+PROTO_DIR="./proto"
+PROTO_OUT="./proto"
+
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
 run: build
 	$(BIN) --config=./configs/config.yaml
+
+generate:
+	protoc -I=$(PROTO_DIR) --go_out=$(PROTO_OUT) --go_opt=paths=source_relative \
+		--go-grpc_out=$(PROTO_OUT) --go-grpc_opt=paths=source_relative \
+		$(PROTO_DIR)/*.proto
 
 build-img:
 	docker build \
@@ -28,10 +36,7 @@ version: build
 test:
 	go test -race ./internal/...
 
-install-lint-deps:
-	(which golangci-lint > /dev/null) || curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.57.2
-
-lint: install-lint-deps
+lint:
 	golangci-lint run ./...
 
 # use as: make migrate-create NAME=create_events_table
