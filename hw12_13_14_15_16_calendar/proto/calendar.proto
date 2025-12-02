@@ -4,6 +4,7 @@ package calendar;
 option go_package = "github.com/esivanov203/otus/hw12_13_14_15_calendar/proto;proto";
 
 import "event.proto";
+import "google/protobuf/empty.proto";
 
 service CalendarService {
   rpc CreateEvent (CreateEventRequest) returns (EventResponse);
@@ -13,11 +14,7 @@ service CalendarService {
   rpc GetEvent (EventRequest) returns (EventResponse);
   rpc ListEventsPeriod (ListRequest) returns (ListResponse);
 
-  rpc Welcome (WelcomeRequest) returns (WelcomeResponse);
-}
-
-message WelcomeRequest {
-}
+  rpc Welcome (google.protobuf.Empty) returns (WelcomeResponse);}
 
 message WelcomeResponse {
   string message = 1;

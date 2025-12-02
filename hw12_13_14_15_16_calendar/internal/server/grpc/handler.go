@@ -12,11 +12,10 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-func (s *GRPCServer) Welcome(ctx context.Context, req *proto.WelcomeRequest) (*proto.WelcomeResponse, error) {
-	_ = ctx
-	_ = req
+func (s *GRPCServer) Welcome(_ context.Context, _ *emptypb.Empty) (*proto.WelcomeResponse, error) {
 	return &proto.WelcomeResponse{
 		Message: "Welcome to Calendar gRPC",
 	}, nil
