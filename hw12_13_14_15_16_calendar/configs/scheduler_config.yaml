@@ -1,0 +1,11 @@
+logger:
+  level: "INFO"
+  type: "json" # or text
+
+storage:
+  type: "sql"
+  dsn: 'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable'
+
+queue:
+  dsn: "amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@${RABBITMQ_HOST}:${RABBITMQ_PORT}/"
+  interval: 10s   # как часто сканировать события

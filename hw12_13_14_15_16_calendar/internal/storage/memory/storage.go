@@ -107,3 +107,33 @@ func (s *Storage) ListEventsInRange(
 
 	return result, nil
 }
+
+func (s *Storage) ListEventsTillNow(_ context.Context) ([]model.Event, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	result := make([]model.Event, 0)
+
+	for _, e := range s.events {
+		if !e.DateStart.Before(time.Now()) && !e.Noticed {
+			result = append(result, e)
+		}
+	}
+
+	return result, nil
+}
+
+func (s *Storage) UpdateNoticedEvent(_ context.Context, id string) error {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if _, ok := s.events[id]; !ok {
+		return storage.ErrNotFound
+	}
+
+	event := s.events[id]
+	event.Noticed = true
+	s.events[id] = event
+
+	return nil
+}

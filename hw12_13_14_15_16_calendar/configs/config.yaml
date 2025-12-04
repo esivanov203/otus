@@ -11,5 +11,6 @@ grpcServer:
  port: 50051
 
 storage:
-  type: "memory" # or "sql"
+#  type: "memory" # or "sql"
+  type: "sql"
   dsn: 'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable'

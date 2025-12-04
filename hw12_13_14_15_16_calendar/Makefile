@@ -13,8 +13,20 @@ PROTO_OUT="./proto"
 build:
 	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/calendar
 
+build-scheduler:
+	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/scheduler
+
+build-sender:
+	go build -v -o $(BIN) -ldflags "$(LDFLAGS)" ./cmd/sender
+
 run: build
 	$(BIN) --config=./configs/config.yaml
+
+run-scheduler: build-scheduler
+	$(BIN) --config=./configs/scheduler_config.yaml
+
+run-sender: build-sender
+	$(BIN) --config=./configs/sender_config.yaml
 
 generate:
 	protoc -I=$(PROTO_DIR) --go_out=$(PROTO_OUT) --go_opt=paths=source_relative \

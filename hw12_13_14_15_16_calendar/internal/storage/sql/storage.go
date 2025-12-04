@@ -112,3 +112,38 @@ func (s *Storage) ListEventsInRange(
 	err := s.db.SelectContext(ctx, &events, query, userID, from, to)
 	return events, err
 }
+
+func (s *Storage) ListEventsTillNow(ctx context.Context) ([]model.Event, error) {
+	var events []model.Event
+
+	query := `
+		SELECT id, user_id, title, description, date_start, date_end
+		FROM events
+		WHERE date_start <= $1 
+			AND noticed = false
+		ORDER BY date_start
+		LIMIT 500
+	`
+
+	err := s.db.SelectContext(ctx, &events, query, time.Now())
+	return events, err
+}
+
+func (s *Storage) UpdateNoticedEvent(ctx context.Context, id string) error {
+	query := `
+		UPDATE events
+		SET noticed = true
+		WHERE id = :id
+	`
+	event := model.Event{ID: id}
+	res, err := s.db.NamedExecContext(ctx, query, &event)
+	if err != nil {
+		return err
+	}
+
+	if affected, _ := res.RowsAffected(); affected == 0 {
+		return storage.ErrNotFound
+	}
+
+	return nil
+}

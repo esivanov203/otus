@@ -11,6 +11,7 @@ type Event struct {
 	DateStart   time.Time `db:"date_start" json:"dateStart"`
 	DateEnd     time.Time `db:"date_end" json:"dateEnd"`
 	UserID      string    `db:"user_id" json:"userId"`
+	Noticed     bool      `db:"noticed" json:"noticed"`
 }
 
 func (e *Event) ValidateCreate() error {
