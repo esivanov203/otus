@@ -6,7 +6,9 @@ CREATE TABLE IF NOT EXISTS events (
      description TEXT,
      date_start TIMESTAMP NOT NULL,
      date_end TIMESTAMP NOT NULL,
-     user_id TEXT NOT NULL
+     user_id TEXT NOT NULL,
+     created_at TIMESTAMP NOT NULL,
+     updated_at TIMESTAMP NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_events_user_id ON events(user_id);
 CREATE INDEX IF NOT EXISTS ids_events_date_start ON events(date_start);

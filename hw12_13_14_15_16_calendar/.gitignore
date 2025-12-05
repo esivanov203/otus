@@ -1,3 +1,4 @@
 logs/
 bin/
 postgres_data/
+rabbitmq_data/

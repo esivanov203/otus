@@ -1,10 +1,12 @@
-package main
+package config
 
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/queue"
 	internalgrpc "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/grpc"
 	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
 	"gopkg.in/yaml.v2"
@@ -15,6 +17,8 @@ type Config struct {
 	Server     internalhttp.ServerConf     `yaml:"server"`
 	GRPCServer internalgrpc.GRPCServerConf `yaml:"grpcServer"`
 	Storage    StorageConf                 `yaml:"storage"`
+	Queue      queue.CalendarQueueConfig   `yaml:"queue"`
+	Interval   time.Duration               `yaml:"interval"`
 }
 
 type StorageConf struct {

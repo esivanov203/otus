@@ -26,6 +26,7 @@ linters-settings:
           - github.com/gorilla/mux
           - github.com/gorilla/handlers
           - github.com/stretchr/testify/mock
+          - github.com/streadway/amqp
       Test:
         files:
           - $test

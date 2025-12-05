@@ -14,6 +14,9 @@ type Storage interface {
 	GetEvent(ctx context.Context, id string) (model.Event, error)
 	ListEventsInRange(ctx context.Context, userID string, from, to time.Time) ([]model.Event, error)
 
+	ListEventsTillNow(ctx context.Context) ([]model.Event, error)
+	UpdateNoticedEvent(ctx context.Context, id string) error
+
 	Connect() error
 	Close() error
 }

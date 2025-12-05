@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/app"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/config"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
 	internalgrpc "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/grpc"
 	internalhttp "github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/server/http"
@@ -21,7 +22,7 @@ func runServer(cmd *cobra.Command, args []string) error {
 	_ = cmd
 	_ = args
 	// config
-	cfg, err := NewConfig(configFile)
+	cfg, err := config.NewConfig(configFile)
 	if err != nil {
 		return fmt.Errorf("loading config: %w", err)
 	}
