@@ -1,7 +1,11 @@
+x-ldflags: &ldflags
+  args:
+    LDFLAGS: "${LDFLAGS}"
+
 services:
   postgres:
     image: postgres:15
-    container_name: calendar_postgres
+    container_name: ${POSTGRES_HOST}
     env_file:
       - .env
     ports:
@@ -17,27 +21,91 @@ services:
 
   rabbitmq:
     image: rabbitmq:3.12-management
-    container_name: calendar_rabbitmq
+    container_name: ${RABBITMQ_HOST}
     env_file:
       - .env
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
     ports:
-      - "5672:5672"
+      - "${RABBITMQ_PORT}:5672"
       - "15672:15672"
     volumes:
       - ./rabbitmq_data:/var/lib/rabbitmq
     networks:
       - calendar_network
-    depends_on:
-      postgres:
-        condition: service_healthy
     healthcheck:
-      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+
+  migrations:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.migrations
+    container_name: calendar_migrations
+    env_file: .env
+    networks:
+      - calendar_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  calendar:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.calendar
+      <<: *ldflags
+    container_name: ${CALENDAR_HOST}
+    env_file:
+      - .env
+    ports:
+      - "${CALENDAR_PORT}:8080"
+      - "${CALENDAR_GRPC_PORT}:50051"
+    networks:
+      - calendar_network
+    healthcheck:
+      test: >
+        /bin/sh -c "
+        curl -f http://localhost:8080/ || exit 1;
+        nc -z localhost 50051 || exit 1
+        "
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      - postgres
+      - migrations
+
+  scheduler:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.scheduler
+      <<: *ldflags
+    container_name: ${CALENDAR_SCHEDULER_HOST}
+    env_file:
+      - .env
+    networks:
+      - calendar_network
+    depends_on:
+      - calendar
+      - rabbitmq
+
+  sender:
+    build:
+      context: .
+      dockerfile: build/Dockerfile.sender
+      <<: *ldflags
+    container_name: ${CALENDAR_SENDER_HOST}
+    env_file:
+      - .env
+    networks:
+      - calendar_network
+    depends_on:
+      - calendar
+      - rabbitmq
 
 networks:
   calendar_network:

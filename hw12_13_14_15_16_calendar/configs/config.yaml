@@ -13,4 +13,4 @@ grpcServer:
 storage:
 #  type: "memory" # or "sql"
   type: "sql"
-  dsn: 'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable'
+  dsn: 'postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable'
