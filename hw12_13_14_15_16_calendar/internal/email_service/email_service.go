@@ -1,4 +1,4 @@
-package email_service
+package emailservice
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 )
 
 type Email struct {
-	UserId  string
+	UserID  string
 	Subject string
 	Body    string
 	EventID string
@@ -22,11 +22,11 @@ func (e *EmailService) Send(_ context.Context, _ Email) error {
 	return nil
 }
 
-type EmailServiceIntegrationTests struct{}
+type IntegrationTestsEmailService struct{}
 
-func (e *EmailServiceIntegrationTests) Send(_ context.Context, msg Email) error {
+func (e *IntegrationTestsEmailService) Send(_ context.Context, msg Email) error {
 	path := os.Getenv("INTEGRATION_TESTS_LOG_PATH")
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}

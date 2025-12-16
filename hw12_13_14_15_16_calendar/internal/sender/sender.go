@@ -11,7 +11,7 @@ import (
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/queue"
 )
 
-func Run(ctx context.Context, logg logger.Logger, q queue.CalendarQueueService, emlS email_service.EmailSender) {
+func Run(ctx context.Context, logg logger.Logger, q queue.CalendarQueueService, emlS emailservice.EmailSender) {
 	msgs, err := q.Consume(ctx, model.QueueName)
 	if err != nil {
 		logg.Error(err.Error())
@@ -25,8 +25,8 @@ func Run(ctx context.Context, logg logger.Logger, q queue.CalendarQueueService, 
 			logg.Error(err.Error())
 			continue
 		}
-		eml := email_service.Email{
-			UserId:  n.UserID,
+		eml := emailservice.Email{
+			UserID:  n.UserID,
 			Subject: "Уведомление о событии: " + n.Title,
 			Body:    fmt.Sprintf("Событие: %s\nНачало:%s", n.Title, n.Date),
 			EventID: n.ID,

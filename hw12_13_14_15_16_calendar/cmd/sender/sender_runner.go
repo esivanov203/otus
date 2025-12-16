@@ -3,13 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/email_service"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/config"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/email_service"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/logger"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/queue"
 	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/sender"
@@ -37,11 +37,11 @@ func runSender(_ *cobra.Command, _ []string) error {
 	defer func() { _ = q.Close() }()
 
 	// email service
-	var es email_service.EmailSender
+	var es emailservice.EmailSender
 	if os.Getenv("INTEGRATION_TESTS") == "true" {
-		es = &email_service.EmailServiceIntegrationTests{}
+		es = &emailservice.IntegrationTestsEmailService{}
 	} else {
-		es = &email_service.EmailService{}
+		es = &emailservice.EmailService{}
 	}
 
 	// context + signal shutdown
