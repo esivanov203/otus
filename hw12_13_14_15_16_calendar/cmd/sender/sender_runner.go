@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/esivanov203/otus/hw12_13_14_15_calendar/internal/email_service"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -34,6 +36,14 @@ func runSender(_ *cobra.Command, _ []string) error {
 	}
 	defer func() { _ = q.Close() }()
 
+	// email service
+	var es email_service.EmailSender
+	if os.Getenv("INTEGRATION_TESTS") == "true" {
+		es = &email_service.EmailServiceIntegrationTests{}
+	} else {
+		es = &email_service.EmailService{}
+	}
+
 	// context + signal shutdown
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP)
 	defer stop()
@@ -41,7 +51,7 @@ func runSender(_ *cobra.Command, _ []string) error {
 	logg.Info("sender is running...")
 
 	// start sender in a goroutine
-	go sender.Run(ctx, logg, q)
+	go sender.Run(ctx, logg, q, es)
 
 	// wait for signal
 	<-ctx.Done()
