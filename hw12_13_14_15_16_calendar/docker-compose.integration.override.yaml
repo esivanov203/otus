@@ -1,0 +1,37 @@
+services:
+  sender:
+    environment:
+      INTEGRATION_TESTS: "true"
+      INTEGRATION_TESTS_LOG_PATH: "/tmp/email_events.log"
+    volumes:
+      - /tmp:/tmp
+
+  integration-tests:
+    image: golang:1.24
+    container_name: integration_tests
+    build:
+      context: .
+      dockerfile: build/Dockerfile.integration
+      args:
+        CODE_DIR: /go/src/
+    volumes:
+      - /tmp:/tmp
+      - ./:/go/src/
+    env_file:
+      - .env
+    environment:
+      INTEGRATION_TESTS: "true"
+      INTEGRATION_TESTS_LOG_PATH: "/tmp/email_events.log"
+    depends_on:
+      sender:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      calendar:
+        condition: service_healthy
+      scheduler:
+        condition: service_healthy
+    networks:
+      - calendar_network

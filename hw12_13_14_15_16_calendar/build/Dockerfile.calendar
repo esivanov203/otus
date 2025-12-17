@@ -1,5 +1,5 @@
 # Собираем в гошке
-FROM golang:1.22 as build
+FROM golang:1.24 AS build
 
 ENV BIN_FILE /opt/calendar/calendar-app
 ENV CODE_DIR /go/src/
@@ -7,8 +7,7 @@ ENV CODE_DIR /go/src/
 WORKDIR ${CODE_DIR}
 
 # Кэшируем слои с модулями
-COPY go.mod .
-COPY go.sum .
+COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . ${CODE_DIR}
@@ -21,16 +20,20 @@ RUN CGO_ENABLED=0 go build \
         -o ${BIN_FILE} cmd/calendar/*
 
 # На выходе тонкий образ
-FROM alpine:3.9
+FROM alpine:3.19
 
 LABEL ORGANIZATION="OTUS Online Education"
 LABEL SERVICE="calendar"
-LABEL MAINTAINERS="student@otus.ru"
+LABEL MAINTAINERS="es.ivanov@otus.ru"
+
+RUN apk add --no-cache tzdata curl
+ENV TZ=Europe/Moscow
 
 ENV BIN_FILE "/opt/calendar/calendar-app"
 COPY --from=build ${BIN_FILE} ${BIN_FILE}
 
-ENV CONFIG_FILE /etc/calendar/config.toml
-COPY ./configs/config.toml ${CONFIG_FILE}
+ENV CONFIG_FILE /etc/calendar/config.yaml
+COPY ./configs/config.yaml ${CONFIG_FILE}
+COPY .env .env
 
-CMD ${BIN_FILE} -config ${CONFIG_FILE}
+CMD ${BIN_FILE} --config ${CONFIG_FILE}

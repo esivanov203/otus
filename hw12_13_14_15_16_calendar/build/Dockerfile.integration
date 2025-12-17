@@ -1,0 +1,15 @@
+# Собираем в гошке
+FROM golang:1.24
+
+ARG CODE_DIR=/go/src/
+WORKDIR ${CODE_DIR}
+COPY go.mod go.sum ./
+RUN go mod download
+
+ENV TZ=Europe/Moscow
+RUN apt-get update \
+ && apt-get install -y tzdata \
+ && rm -rf /var/lib/apt/lists/*
+
+CMD [ "sh", "-c", "go test ./tests/integration -v" ]
+

@@ -37,6 +37,9 @@ linters-settings:
           - github.com/esivanov203/otus/hw12_13_14_15_calendar/internal
           - github.com/esivanov203/otus/hw12_13_14_15_calendar/proto
           - github.com/gorilla/mux
+          - github.com/joho/godotenv
+          - github.com/lib/pq
+
 issues:
   exclude-rules:
     - path: _test\.go
