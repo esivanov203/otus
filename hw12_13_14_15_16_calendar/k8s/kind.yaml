@@ -1,0 +1,17 @@
+# kind-config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: calendar-cluster
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      # HTTP
+      - containerPort: 30080
+        hostPort: 80
+        listenAddress: "0.0.0.0"
+        protocol: TCP
+      # gRPC
+      - containerPort: 30501
+        hostPort: 50051
+        listenAddress: "0.0.0.0"
+        protocol: TCP
