@@ -1,0 +1,51 @@
+imagePullPolicy: IfNotPresent
+
+calendar:
+  replicaCount: 1
+  image:
+    repository: calendar-app
+    tag: latest
+  containerPorts:
+    http: 8080
+    grpc: 50051
+  service:
+    httpPort: 80
+    grpcPort: 50051
+
+scheduler:
+  replicaCount: 1
+  image:
+    repository: calendar-scheduler
+    tag: latest
+
+sender:
+  replicaCount: 1
+  image:
+    repository: calendar-sender
+    tag: latest
+
+migrations:
+  image:
+    repository: calendar-migrations
+    tag: latest
+
+postgres:
+  service:
+    name: calendar-postgres
+  image:
+    repository: postgres
+    tag: "15"
+
+rabbitmq:
+  service:
+    name: calendar-rabbitmq
+  image:
+    repository: rabbitmq
+    tag: "3.12-management"
+
+ingress:
+  className: nginx
+  httpHost: calendar.local
+  httpPath: /
+  grpcHost: grpc.calendar.local
+  grpcPath: /

@@ -1,0 +1,18 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sender
+spec:
+  replicas: {{ .Values.sender.replicaCount }}
+  selector:
+    matchLabels:
+      app: sender
+  template:
+    metadata:
+      labels:
+        app: sender
+    spec:
+      containers:
+        - name: sender
+          image: "{{ .Values.sender.image.repository }}:{{ .Values.sender.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}

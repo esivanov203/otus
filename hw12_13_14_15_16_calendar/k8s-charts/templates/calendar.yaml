@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  replicas: {{ .Values.calendar.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.calendar.image.repository }}:{{ .Values.calendar.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          ports:
+            - containerPort: {{ .Values.calendar.containerPorts.http }}
+            - containerPort: {{ .Values.calendar.containerPorts.grpc }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Chart.Name }}
+spec:
+  selector:
+    app: {{ .Chart.Name }}
+  ports:
+    - name: http
+      port: {{ .Values.calendar.service.httpPort }}
+      targetPort: {{ .Values.calendar.containerPorts.http }}
+    - name: grpc
+      port: {{ .Values.calendar.service.grpcPort }}
+      targetPort: {{ .Values.calendar.containerPorts.grpc }}

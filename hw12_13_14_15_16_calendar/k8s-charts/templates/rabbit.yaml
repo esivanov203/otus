@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.rabbitmq.service.name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.rabbitmq.service.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.rabbitmq.service.name }}
+    spec:
+      containers:
+        - name: rabbitmq
+          image: "{{ .Values.rabbitmq.image.repository }}:{{ .Values.rabbitmq.image.tag }}"
+          ports:
+            - containerPort: 5672
+            - containerPort: 15672
+          envFrom:
+            - configMapRef:
+                name: {{ .Chart.Name }}-env
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.rabbitmq.service.name }}
+spec:
+  selector:
+    app: {{ .Values.rabbitmq.service.name }}
+  ports:
+    - name: amqp
+      port: 5672
+      targetPort: 5672
+    - name: management
+      port: 15672
+      targetPort: 15672
+  type: ClusterIP

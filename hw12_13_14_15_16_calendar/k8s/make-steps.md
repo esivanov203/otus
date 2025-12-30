@@ -7,14 +7,15 @@ kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main
 kubectl create configmap calendar-env --from-env-file=.env
 kubectl create configmap calendar-config --from-file=configs/config.yaml
 
-kubectl apply -f k8s/postgres.yaml
-kubectl apply -f k8s/rabbit.yaml
-
 make build-img
 kind load docker-image calendar-app:latest --name calendar-cluster
 kind load docker-image calendar-scheduler:latest --name calendar-cluster
 kind load docker-image calendar-sender:latest --name calendar-cluster
 kind load docker-image calendar-migrations:latest --name calendar-cluster
+
+# начало блока который выполняет helm install calendar ./k8s-charts
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/rabbit.yaml
 
 kubectl apply -f k8s/migration.yaml
 kubectl wait --for=condition=complete job/calendar-migrations --timeout=60s
@@ -24,6 +25,7 @@ kubectl apply -f k8s/calendar.yaml
 kubectl apply -f k8s/scheduler.yaml
 
 kubectl apply -f k8s/ingress.yaml
+# конец блока
 
 echo "127.0.0.1 calendar.local" | sudo tee -a /etc/hosts
 echo "127.0.0.1 grpc.calendar.local" | sudo tee -a /etc/hosts
