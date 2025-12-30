@@ -5,13 +5,11 @@ name: calendar-cluster
 nodes:
   - role: control-plane
     extraPortMappings:
-      # HTTP
-      - containerPort: 30080
+      - containerPort: 80
         hostPort: 80
         listenAddress: "0.0.0.0"
         protocol: TCP
-      # gRPC
-      - containerPort: 30501
-        hostPort: 50051
+      - containerPort: 443
+        hostPort: 443
         listenAddress: "0.0.0.0"
         protocol: TCP
