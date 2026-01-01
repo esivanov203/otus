@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: calendar-migrations
+spec:
+  template:
+    spec:
+      containers:
+        - name: migrations
+          image: calendar-migrations:latest
+          imagePullPolicy: IfNotPresent
+          envFrom:
+            - configMapRef:
+                name: calendar-env
+          volumeMounts:
+            - name: config
+              mountPath: /etc/calendar
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: calendar-config
+      restartPolicy: Never
+  backoffLimit: 0

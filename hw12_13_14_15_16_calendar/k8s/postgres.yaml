@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: calendar-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: calendar-postgres
+  template:
+    metadata:
+      labels:
+        app: calendar-postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - configMapRef:
+                name: calendar-env
+          volumeMounts:
+            - name: postgres-data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: postgres-data
+          emptyDir: {}
+---
+# Postgres
+apiVersion: v1
+kind: Service
+metadata:
+  name: calendar-postgres   # имя должно совпадать с POSTGRES_HOST
+spec:
+  selector:
+    app: calendar-postgres
+  ports:
+    - port: 5432
+      targetPort: 5432
+  type: ClusterIP
+

@@ -50,6 +50,7 @@ generate:
 # Docker
 # ==============================
 build-img:
+	docker build -t calendar-migrations -f build/Dockerfile.migrations .
 	docker build --build-arg=LDFLAGS="$(LDFLAGS)" -t calendar-app -f build/Dockerfile.calendar .
 	docker build --build-arg=LDFLAGS="$(LDFLAGS)" -t calendar-scheduler -f build/Dockerfile.scheduler .
 	docker build --build-arg=LDFLAGS="$(LDFLAGS)" -t calendar-sender -f build/Dockerfile.sender .

@@ -1,0 +1,24 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Chart.Name }}-migrations  # ← calendar-migrations
+spec:
+  template:
+    spec:
+      containers:
+        - name: migrations
+          image: "{{ .Values.migrations.image.repository }}:{{ .Values.migrations.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Chart.Name }}-env  # ← calendar-env
+          volumeMounts:
+            - name: config
+              mountPath: /etc/calendar
+              readOnly: true
+      volumes:
+        - name: config
+          configMap:
+            name: {{ .Chart.Name }}-config  # ← calendar-config
+      restartPolicy: Never
+  backoffLimit: 0
